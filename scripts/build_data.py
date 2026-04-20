@@ -80,6 +80,13 @@ MANUAL_CATEGORY_MAP = {
     "高桥流 slides.md": "visual",
 }
 
+EXCLUDED_FILES = {
+    "主席指点迷津提示词.md",
+    "毛主席理论武器提示词.md",
+    "抓主要矛盾的提示词.md",
+    "矛盾分析法提示词.md",
+}
+
 
 KEYWORD_TAGS = {
     "研究": ["研究", "分析", "预测", "领域", "洞察", "报告"],
@@ -145,7 +152,7 @@ def title_from_text(name: str, text: str) -> str:
 
 def main() -> None:
     items = []
-    file_names = sorted(MANUAL_CATEGORY_MAP.keys())
+    file_names = sorted(name for name in MANUAL_CATEGORY_MAP.keys() if name not in EXCLUDED_FILES)
 
     def resolve_source_path(file_name: str) -> Path:
         preferred = SOURCE_DIR / file_name
