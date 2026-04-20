@@ -649,8 +649,86 @@ h2 {
   box-shadow: 0 30px 100px rgba(0, 0, 0, 0.5), 0 0 20px rgba(92, 255, 150, 0.08);
 }
 
+.scene-3d .app-shell {
+  width: 100%;
+  max-width: none;
+  padding: 0;
+  display: block;
+}
+
+.scene-3d .sidebar {
+  display: none;
+}
+
+.scene-3d .main-content {
+  position: static;
+}
+
 .scene-3d .toolbar {
-  margin-bottom: 12px;
+  position: fixed;
+  top: 18px;
+  left: 18px;
+  right: 18px;
+  z-index: 4;
+  margin-bottom: 0;
+  background: rgba(3, 12, 7, 0.82);
+  border-color: rgba(92, 255, 150, 0.18);
+  backdrop-filter: blur(16px);
+}
+
+.scene-3d .scene-shell {
+  position: fixed;
+  inset: 0;
+  z-index: 3;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.scene-3d .scene-shell-header {
+  position: absolute;
+  top: 96px;
+  left: 24px;
+  right: 24px;
+  z-index: 2;
+  margin: 0;
+  pointer-events: none;
+}
+
+.scene-3d .scene-shell-meta {
+  text-shadow: 0 0 16px rgba(92, 255, 150, 0.24);
+}
+
+.scene-3d .scene-viewport-frame {
+  min-height: 100vh;
+  height: 100vh;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.scene-3d .scene-viewport {
+  height: 100vh;
+}
+
+.scene-3d .scene-legend {
+  left: 24px;
+  right: auto;
+  bottom: 24px;
+  max-width: min(560px, calc(100vw - 48px));
+  background: rgba(3, 12, 7, 0.58);
+  border-color: rgba(92, 255, 150, 0.24);
+}
+
+.scene-3d .noise-layer {
+  opacity: 0.14;
+}
+
+.scene-3d .wall-shell {
+  display: none;
 }
 
 @media (max-width: 1180px) {
@@ -678,6 +756,18 @@ h2 {
   .scene-viewport {
     min-height: 62vh;
     height: 62vh;
+  }
+
+  .scene-3d .toolbar {
+    left: 14px;
+    right: 14px;
+    top: 14px;
+  }
+
+  .scene-3d .scene-shell-header {
+    top: 108px;
+    left: 14px;
+    right: 14px;
   }
 }
 
@@ -719,6 +809,17 @@ h2 {
   .scene-viewport {
     min-height: 56vh;
     height: 56vh;
+  }
+
+  .scene-3d .scene-shell-header {
+    top: 132px;
+  }
+
+  .scene-3d .scene-legend {
+    left: 12px;
+    right: 12px;
+    max-width: none;
+    bottom: 12px;
   }
 
   .detail-drawer {
