@@ -203,9 +203,15 @@
     detailDrawer.classList.remove("is-hidden");
     drawerBackdrop.classList.remove("is-hidden");
     drawerDismissButton.classList.remove("is-hidden");
+    if (window.promptMotion && typeof window.promptMotion.openDrawer === "function") {
+      window.promptMotion.openDrawer(detailDrawer, drawerBackdrop, drawerDismissButton);
+    }
   }
 
-  function closeDrawer() {
+  async function closeDrawer() {
+    if (window.promptMotion && typeof window.promptMotion.closeDrawer === "function") {
+      await window.promptMotion.closeDrawer(detailDrawer, drawerBackdrop, drawerDismissButton);
+    }
     detailDrawer.classList.add("is-hidden");
     drawerBackdrop.classList.add("is-hidden");
     drawerDismissButton.classList.add("is-hidden");
@@ -350,6 +356,9 @@
     renderCards(filteredItems);
     renderDetail(filteredItems);
     applySceneMode();
+    if (window.promptMotion && typeof window.promptMotion.animateWall === "function") {
+      window.promptMotion.animateWall(cardList, document.querySelectorAll(".prompt-card"));
+    }
   }
 
   searchInput.addEventListener("input", (event) => {
