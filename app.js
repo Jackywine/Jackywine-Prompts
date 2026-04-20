@@ -355,7 +355,7 @@
   function render() {
     const filteredItems = getFilteredItems();
     const categoryMeta = getCategoryMeta(activeCategory);
-    const sceneItems = filteredItems.slice(0, 18);
+    const sceneItems = filteredItems.slice(0, 24);
     promptCount.textContent = String(items.length).padStart(2, "0");
     activeCategoryName.textContent = categoryMeta.name;
     resultMeta.textContent = `Showing ${filteredItems.length} of ${items.length} prompt records`;
