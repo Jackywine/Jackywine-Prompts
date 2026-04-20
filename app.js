@@ -264,27 +264,6 @@
       .join("");
   }
 
-  function setCardTilt(card, event) {
-    if (sceneMode !== "3d") {
-      card.style.removeProperty("--tilt-x");
-      card.style.removeProperty("--tilt-y");
-      return;
-    }
-    const rect = card.getBoundingClientRect();
-    const x = (event.clientX - rect.left) / rect.width - 0.5;
-    const y = (event.clientY - rect.top) / rect.height - 0.5;
-    card.style.setProperty("--tilt-y", `${x * 10}deg`);
-    card.style.setProperty("--tilt-x", `${y * -10}deg`);
-  }
-
-  function bindCardMotion(card) {
-    card.addEventListener("mousemove", (event) => setCardTilt(card, event));
-    card.addEventListener("mouseleave", () => {
-      card.style.removeProperty("--tilt-x");
-      card.style.removeProperty("--tilt-y");
-    });
-  }
-
   function renderCards(filteredItems) {
     if (!filteredItems.length) {
       cardList.innerHTML = '<div class="empty-state">No records matched the current query.</div>';
@@ -324,7 +303,6 @@
       .join("");
 
     [...cardList.querySelectorAll("[data-id]")].forEach((button) => {
-      bindCardMotion(button);
       button.addEventListener("click", () => {
         activeItemId = button.dataset.id;
         render();
