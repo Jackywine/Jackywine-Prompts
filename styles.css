@@ -386,6 +386,99 @@ h2 {
   height: 72vh;
 }
 
+.scene-connections,
+.scene-network {
+  position: absolute;
+  inset: 0;
+}
+
+.scene-connections {
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.scene-link {
+  stroke: rgba(125, 255, 177, 0.5);
+  stroke-width: 0.18;
+  vector-effect: non-scaling-stroke;
+  filter: drop-shadow(0 0 6px rgba(125, 255, 177, 0.55));
+}
+
+.scene-network {
+  z-index: 2;
+  perspective: 1400px;
+  transform-style: preserve-3d;
+}
+
+.scene-node {
+  position: absolute;
+  width: min(260px, 24vw);
+  min-width: 180px;
+  transform:
+    translate3d(-50%, -50%, var(--node-z))
+    rotateX(var(--node-rx))
+    rotateY(var(--node-ry))
+    scale(var(--node-scale));
+  transform-style: preserve-3d;
+  border-radius: 8px;
+  border: 1px solid rgba(92, 255, 150, 0.28);
+  background: linear-gradient(180deg, rgba(5, 18, 9, 0.92), rgba(3, 10, 6, 0.88));
+  color: var(--text);
+  text-align: left;
+  padding: 14px;
+  box-shadow:
+    0 22px 54px rgba(0, 0, 0, 0.36),
+    0 0 18px rgba(92, 255, 150, 0.12);
+  backdrop-filter: blur(12px);
+  animation: sceneDrift 8s ease-in-out infinite;
+  animation-delay: var(--node-delay);
+  cursor: pointer;
+}
+
+.scene-node strong,
+.scene-node span {
+  display: block;
+}
+
+.scene-node strong {
+  margin: 6px 0 8px;
+  color: #e8fff1;
+  font-size: 0.96rem;
+  line-height: 1.3;
+}
+
+.scene-node span:last-child {
+  color: #9dd9b0;
+  font-size: 0.76rem;
+  line-height: 1.45;
+}
+
+.scene-node-kicker {
+  color: #73b78a;
+  text-transform: uppercase;
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+}
+
+.scene-node.is-active {
+  border-color: rgba(176, 255, 202, 0.9);
+  box-shadow:
+    0 28px 70px rgba(0, 0, 0, 0.42),
+    0 0 24px rgba(92, 255, 150, 0.26);
+}
+
+@keyframes sceneDrift {
+  0%,
+  100% {
+    margin-top: 0;
+  }
+  50% {
+    margin-top: -10px;
+  }
+}
+
 .scene-legend {
   position: absolute;
   left: 16px;
@@ -708,13 +801,17 @@ h2 {
   border: 0;
   border-radius: 0;
   background: transparent;
-  pointer-events: none;
 }
 
 .scene-3d .scene-viewport {
   height: 100vh;
   opacity: 0;
   pointer-events: none;
+}
+
+.scene-3d .scene-network {
+  inset: 112px 24px 104px 24px;
+  pointer-events: auto;
 }
 
 .scene-3d .scene-legend {
@@ -760,6 +857,14 @@ h2 {
   .scene-viewport {
     min-height: 62vh;
     height: 62vh;
+  }
+
+  .scene-node {
+    width: min(220px, 30vw);
+  }
+
+  .scene-3d .scene-network {
+    inset: 126px 18px 98px 18px;
   }
 
   .scene-3d .toolbar {
@@ -813,6 +918,24 @@ h2 {
   .scene-viewport {
     min-height: 56vh;
     height: 56vh;
+  }
+
+  .scene-node {
+    width: min(210px, 58vw);
+    min-width: 0;
+    padding: 12px;
+  }
+
+  .scene-node strong {
+    font-size: 0.88rem;
+  }
+
+  .scene-node span:last-child {
+    font-size: 0.72rem;
+  }
+
+  .scene-3d .scene-network {
+    inset: 150px 12px 86px 12px;
   }
 
   .scene-3d .scene-shell-header {
