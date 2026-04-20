@@ -46,10 +46,14 @@
   const detailTags = document.getElementById("detailTags");
   const detailBody = document.getElementById("detailBody");
   const copyButton = document.getElementById("copyButton");
+  const splitViewButton = document.getElementById("splitViewButton");
+  const waterfallViewButton = document.getElementById("waterfallViewButton");
+  const contentGrid = document.querySelector(".content-grid");
 
   let activeCategory = "all";
   let activeItemId = null;
   let query = "";
+  let viewMode = "split";
 
   function getCategoryMeta(categoryId) {
     const raw = categories.find((category) => category.id === categoryId) || { id: categoryId };
@@ -265,6 +269,10 @@
     [...cardList.querySelectorAll("[data-id]")].forEach((button) => {
       button.addEventListener("click", () => {
         activeItemId = button.dataset.id;
+        if (viewMode === "waterfall") {
+          render();
+          return;
+        }
         render();
       });
     });
@@ -304,6 +312,10 @@
     promptCount.textContent = String(items.length).padStart(2, "0");
     activeCategoryName.textContent = categoryMeta.name;
     resultMeta.textContent = `Showing ${filteredItems.length} of ${items.length} prompt records`;
+    contentGrid.classList.toggle("is-waterfall", viewMode === "waterfall");
+    cardList.classList.toggle("is-waterfall", viewMode === "waterfall");
+    splitViewButton.classList.toggle("is-active", viewMode === "split");
+    waterfallViewButton.classList.toggle("is-active", viewMode === "waterfall");
     renderCategoryFilters();
     renderCategorySummary();
     renderCards(filteredItems);
@@ -312,6 +324,16 @@
 
   searchInput.addEventListener("input", (event) => {
     query = event.target.value;
+    render();
+  });
+
+  splitViewButton.addEventListener("click", () => {
+    viewMode = "split";
+    render();
+  });
+
+  waterfallViewButton.addEventListener("click", () => {
+    viewMode = "waterfall";
     render();
   });
 

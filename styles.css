@@ -277,6 +277,31 @@ h2 {
   background: rgba(2, 13, 7, 0.74);
 }
 
+.view-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(4, 15, 8, 0.84);
+}
+
+.view-button {
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 8px 12px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.view-button.is-active {
+  border-color: var(--border-strong);
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
 .status-item {
   display: flex;
   align-items: center;
@@ -306,14 +331,28 @@ h2 {
 
 .content-grid {
   display: grid;
-  grid-template-columns: minmax(320px, 460px) minmax(0, 1fr);
+  grid-template-columns: minmax(320px, 460px) minmax(420px, 760px);
+  justify-content: start;
+  align-items: start;
   gap: 20px;
+}
+
+.content-grid.is-waterfall {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .list-panel,
 .detail-panel {
   min-height: calc(100vh - 120px);
   background: var(--panel-strong);
+}
+
+.content-grid.is-waterfall .detail-panel {
+  display: none;
+}
+
+.content-grid.is-waterfall .list-panel {
+  width: 100%;
 }
 
 .sticky-header {
@@ -329,6 +368,12 @@ h2 {
   gap: 12px;
 }
 
+.card-list.is-waterfall {
+  display: block;
+  column-width: 320px;
+  column-gap: 12px;
+}
+
 .prompt-card {
   width: 100%;
   padding: 16px;
@@ -337,6 +382,12 @@ h2 {
   color: var(--text);
   cursor: pointer;
   transition: border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.card-list.is-waterfall .prompt-card {
+  display: inline-block;
+  margin: 0 0 12px;
+  break-inside: avoid;
 }
 
 .prompt-card:hover,
@@ -373,6 +424,7 @@ h2 {
 
 .detail-panel {
   overflow: hidden;
+  width: min(100%, 760px);
 }
 
 .detail-header {
@@ -487,6 +539,16 @@ h2 {
 
   .content-grid {
     grid-template-columns: 1fr;
+  }
+
+  .view-toggle {
+    order: 3;
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .view-button {
+    flex: 1;
   }
 
   .list-panel,
