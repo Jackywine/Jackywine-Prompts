@@ -57,6 +57,8 @@
   const sceneShell = document.getElementById("sceneShell");
   const sceneRecordCount = document.getElementById("sceneRecordCount");
   const sceneHint = document.getElementById("sceneHint");
+  const sceneConnections = document.getElementById("sceneConnections");
+  const sceneDomFallback = document.getElementById("sceneDomFallback");
 
   let activeCategory = "all";
   let activeItemId = null;
@@ -352,6 +354,91 @@
     };
   }
 
+  function renderSceneFallback(sceneItems) {
+    if (!sceneDomFallback || !sceneConnections) return;
+
+    if (!sceneItems.length) {
+      sceneDomFallback.innerHTML = "";
+      sceneConnections.innerHTML = "";
+      return;
+    }
+
+    const nodes = sceneItems.slice(0, 12).map((item, index) => {
+      const angle = index * 2.399963229728653;
+      const radius = 18 + (index % 5) * 6;
+      const x = 50 + Math.cos(angle) * radius;
+      const y = 50 + Math.sin(angle) * (radius * 0.62);
+      const z = ((index % 4) - 1.5) * 80;
+      const rotateY = Math.cos(angle) * 14;
+      const rotateX = Math.sin(angle * 1.2) * -10;
+      return {
+        item,
+        x,
+        y,
+        z,
+        rotateY,
+        rotateX,
+        scale: item.id === activeItemId ? 1.08 : 0.92,
+      };
+    });
+
+    sceneDomFallback.innerHTML = nodes
+      .map(
+        (node, index) => `
+          <button
+            type="button"
+            class="scene-node ${node.item.id === activeItemId ? "is-active" : ""}"
+            data-scene-id="${node.item.id}"
+            style="
+              left:${node.x}%;
+              top:${node.y}%;
+              --node-z:${node.z}px;
+              --node-rx:${node.rotateX}deg;
+              --node-ry:${node.rotateY}deg;
+              --node-scale:${node.scale};
+              --node-delay:${index * 0.18}s;
+            "
+          >
+            <span class="scene-node-kicker">${getCategoryMeta(node.item.category).name}</span>
+            <strong>${node.item.title}</strong>
+            <span>${node.item.summary}</span>
+          </button>
+        `
+      )
+      .join("");
+
+    const edges = [];
+    for (let index = 0; index < nodes.length - 1; index += 1) {
+      edges.push([nodes[index], nodes[index + 1]]);
+      if (index + 2 < nodes.length && index % 2 === 0) {
+        edges.push([nodes[index], nodes[index + 2]]);
+      }
+    }
+
+    sceneConnections.setAttribute("viewBox", "0 0 100 100");
+    sceneConnections.innerHTML = edges
+      .map(
+        ([from, to]) => `
+          <line
+            x1="${from.x}"
+            y1="${from.y}"
+            x2="${to.x}"
+            y2="${to.y}"
+            class="scene-link"
+          />
+        `
+      )
+      .join("");
+
+    [...sceneDomFallback.querySelectorAll("[data-scene-id]")].forEach((button) => {
+      button.addEventListener("click", () => {
+        activeItemId = button.dataset.sceneId;
+        render();
+        openDrawer();
+      });
+    });
+  }
+
   function render() {
     const filteredItems = getFilteredItems();
     const categoryMeta = getCategoryMeta(activeCategory);
@@ -363,6 +450,7 @@
     renderCategoryFilters();
     renderCategorySummary();
     renderCards(filteredItems);
+    renderSceneFallback(sceneItems);
     renderDetail(filteredItems);
     applySceneMode();
     window.dispatchEvent(
