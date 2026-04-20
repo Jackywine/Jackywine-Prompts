@@ -52,6 +52,10 @@ input {
   height: 100%;
 }
 
+.fx-layer.is-hidden {
+  display: none;
+}
+
 .noise-layer {
   z-index: 1;
   opacity: 0.08;
@@ -555,28 +559,6 @@ h2 {
   text-align: center;
 }
 
-.scene-3d .app-shell {
-  perspective: 1800px;
-}
-
-.scene-3d .hero-block,
-.scene-3d .panel,
-.scene-3d .toolbar,
-.scene-3d .detail-drawer {
-  transform: translateZ(0);
-  box-shadow: 0 30px 100px rgba(0, 0, 0, 0.5), 0 0 20px rgba(92, 255, 150, 0.08);
-}
-
-.scene-3d .prompt-card {
-  transform:
-    translateZ(calc(var(--depth-index, 0) * 2px))
-    rotateX(var(--tilt-x, 0deg))
-    rotateY(var(--tilt-y, 0deg));
-  box-shadow:
-    0 26px 54px rgba(0, 0, 0, 0.45),
-    0 0 24px rgba(92, 255, 150, 0.12);
-}
-
 .scene-2d .prompt-card:hover,
 .scene-2d .prompt-card:focus-visible {
   transform: translateY(-2px);
@@ -586,6 +568,15 @@ h2 {
 .scene-3d .prompt-card:hover,
 .scene-3d .prompt-card:focus-visible {
   border-color: var(--accent);
+  transform: translateY(-2px);
+  box-shadow: 0 0 20px rgba(92, 255, 150, 0.18);
+}
+
+.scene-3d .hero-block,
+.scene-3d .panel,
+.scene-3d .toolbar,
+.scene-3d .detail-drawer {
+  box-shadow: 0 30px 100px rgba(0, 0, 0, 0.5), 0 0 20px rgba(92, 255, 150, 0.08);
 }
 
 @media (max-width: 1180px) {
