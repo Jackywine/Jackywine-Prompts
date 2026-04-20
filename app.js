@@ -3,6 +3,34 @@
   const categories = data.categories;
   const items = data.items;
 
+  const LABELS = {
+    all: { name: "All Sectors" },
+    thinking: {
+      name: "Thinking Models",
+      description: "Frameworks for sharper questions, contradiction spotting, and reasoning discipline.",
+    },
+    research: {
+      name: "Research Ops",
+      description: "Deep research, forecasting, issue mapping, and long-form analysis prompts.",
+    },
+    writing: {
+      name: "Writing Engine",
+      description: "Prompts for titles, long-form writing, social posts, rewriting, and tone control.",
+    },
+    learning: {
+      name: "Learning Flow",
+      description: "Reading, explanation, simplification, and study-oriented prompt patterns.",
+    },
+    visual: {
+      name: "Visual Output",
+      description: "Image direction, slide prompts, visual style boards, and presentation assets.",
+    },
+    workflow: {
+      name: "System Stack",
+      description: "System prompts, AI workflows, skills, prompt curation, and operator playbooks.",
+    },
+  };
+
   const promptCount = document.getElementById("promptCount");
   const activeCategoryName = document.getElementById("activeCategoryName");
   const resultMeta = document.getElementById("resultMeta");
@@ -24,7 +52,13 @@
   let query = "";
 
   function getCategoryMeta(categoryId) {
-    return categories.find((category) => category.id === categoryId);
+    const raw = categories.find((category) => category.id === categoryId) || { id: categoryId };
+    const label = LABELS[categoryId] || {};
+    return {
+      ...raw,
+      name: label.name || raw.name || "Unknown Sector",
+      description: label.description || raw.description || "",
+    };
   }
 
   function escapeHtml(text) {
@@ -40,7 +74,7 @@
       .replace(/\[\[([^\]|]+)\|([^\]]+)\]\]/g, "$2")
       .replace(/\[\[([^\]]+)\]\]/g, "$1")
       .replace(/`([^`]+)`/g, "<code>$1</code>")
-      .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noreferrer">图片链接</a>')
+      .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noreferrer">Image Link</a>')
       .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noreferrer">$1</a>');
   }
 
@@ -154,10 +188,10 @@
     }, {});
 
     const entries = [
-      { id: "all", name: "全部", count: items.length },
+      { id: "all", name: LABELS.all.name, count: items.length },
       ...categories.map((category) => ({
         id: category.id,
-        name: category.name,
+        name: getCategoryMeta(category.id).name,
         count: counts[category.id] || 0,
       })),
     ];
@@ -187,12 +221,13 @@
   function renderCategorySummary() {
     categorySummary.innerHTML = categories
       .map((category) => {
+        const meta = getCategoryMeta(category.id);
         const count = items.filter((item) => item.category === category.id).length;
         return `
           <div class="summary-item">
-            <h3>${category.name}</h3>
-            <p>${category.description}</p>
-            <p>${count} 条提示词</p>
+            <h3>${meta.name}</h3>
+            <p>${meta.description}</p>
+            <p>${count} prompt records</p>
           </div>
         `;
       })
@@ -201,7 +236,7 @@
 
   function renderCards(filteredItems) {
     if (!filteredItems.length) {
-      cardList.innerHTML = '<div class="empty-state">没有匹配结果，换个关键词试试。</div>';
+      cardList.innerHTML = '<div class="empty-state">No records matched the current query.</div>';
       return;
     }
 
@@ -218,7 +253,7 @@
             <h3>${item.title}</h3>
             <p>${item.summary}</p>
             <div class="card-meta">
-              <span>${categoryMeta ? categoryMeta.name : "未分类"}</span>
+              <span>${categoryMeta.name}</span>
               <span>${item.filename}</span>
             </div>
             <div class="tag-row">${tags}</div>
@@ -244,7 +279,7 @@
     }
 
     const categoryMeta = getCategoryMeta(activeItem.category);
-    detailCategory.textContent = categoryMeta ? categoryMeta.name : "未分类";
+    detailCategory.textContent = categoryMeta.name;
     detailTitle.textContent = activeItem.title;
     detailSummary.textContent = activeItem.summary;
     detailTags.innerHTML = (activeItem.tags || [])
@@ -256,9 +291,9 @@
 
     copyButton.onclick = async function () {
       await navigator.clipboard.writeText(activeItem.content);
-      copyButton.textContent = "已复制";
+      copyButton.textContent = "Copied";
       window.setTimeout(() => {
-        copyButton.textContent = "复制提示词";
+        copyButton.textContent = "Copy Prompt";
       }, 1200);
     };
   }
@@ -266,9 +301,9 @@
   function render() {
     const filteredItems = getFilteredItems();
     const categoryMeta = getCategoryMeta(activeCategory);
-    promptCount.textContent = String(items.length);
-    activeCategoryName.textContent = categoryMeta ? categoryMeta.name : "全部";
-    resultMeta.textContent = `当前显示 ${filteredItems.length} / ${items.length} 条提示词`;
+    promptCount.textContent = String(items.length).padStart(2, "0");
+    activeCategoryName.textContent = categoryMeta.name;
+    resultMeta.textContent = `Showing ${filteredItems.length} of ${items.length} prompt records`;
     renderCategoryFilters();
     renderCategorySummary();
     renderCards(filteredItems);
