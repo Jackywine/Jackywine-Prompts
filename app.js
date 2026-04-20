@@ -54,6 +54,9 @@
   const drawerDismissButton = document.getElementById("drawerDismissButton");
   const mode2dButton = document.getElementById("mode2dButton");
   const mode3dButton = document.getElementById("mode3dButton");
+  const sceneShell = document.getElementById("sceneShell");
+  const sceneRecordCount = document.getElementById("sceneRecordCount");
+  const sceneHint = document.getElementById("sceneHint");
 
   let activeCategory = "all";
   let activeItemId = null;
@@ -195,6 +198,8 @@
     document.body.classList.toggle("scene-3d", sceneMode === "3d");
     mode2dButton.classList.toggle("is-active", sceneMode === "2d");
     mode3dButton.classList.toggle("is-active", sceneMode === "3d");
+    sceneShell.classList.toggle("is-hidden", sceneMode !== "3d");
+    cardList.closest(".wall-shell").classList.toggle("is-hidden", sceneMode === "3d");
     localStorage.setItem(STORAGE_KEY, sceneMode);
     window.dispatchEvent(new CustomEvent("prompt-scene-mode-change", { detail: { mode: sceneMode } }));
   }
@@ -322,6 +327,7 @@
     if (!activeItem) {
       detailEmpty.classList.remove("is-hidden");
       detailContent.classList.add("is-hidden");
+      sceneHint.textContent = "Select a prompt node to inspect the full record.";
       return;
     }
 
@@ -335,6 +341,7 @@
     detailBody.innerHTML = renderMarkdown(activeItem.content);
     detailEmpty.classList.add("is-hidden");
     detailContent.classList.remove("is-hidden");
+    sceneHint.textContent = `${activeItem.title} loaded. Open the drawer for the full prompt body.`;
 
     copyButton.onclick = async function () {
       await navigator.clipboard.writeText(activeItem.content);
@@ -348,14 +355,32 @@
   function render() {
     const filteredItems = getFilteredItems();
     const categoryMeta = getCategoryMeta(activeCategory);
+    const sceneItems = filteredItems.slice(0, 18);
     promptCount.textContent = String(items.length).padStart(2, "0");
     activeCategoryName.textContent = categoryMeta.name;
     resultMeta.textContent = `Showing ${filteredItems.length} of ${items.length} prompt records`;
+    sceneRecordCount.textContent = `${sceneItems.length} active nodes`;
     renderCategoryFilters();
     renderCategorySummary();
     renderCards(filteredItems);
     renderDetail(filteredItems);
     applySceneMode();
+    window.dispatchEvent(
+      new CustomEvent("prompt-records-update", {
+        detail: {
+          items: sceneItems.map((item) => ({
+            id: item.id,
+            title: item.title,
+            summary: item.summary,
+            category: getCategoryMeta(item.category).name,
+            tags: item.tags || [],
+            filename: item.filename,
+          })),
+          activeItemId,
+          mode: sceneMode,
+        },
+      })
+    );
     if (window.promptMotion && typeof window.promptMotion.animateWall === "function") {
       window.promptMotion.animateWall(cardList, document.querySelectorAll(".prompt-card"));
     }
@@ -384,6 +409,14 @@
     if (event.key === "Escape") {
       closeDrawer();
     }
+  });
+
+  window.addEventListener("prompt-record-selected", (event) => {
+    const nextId = event.detail && event.detail.id;
+    if (!nextId || nextId === activeItemId) return;
+    activeItemId = nextId;
+    render();
+    openDrawer();
   });
 
   render();
