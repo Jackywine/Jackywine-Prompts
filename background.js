@@ -356,30 +356,36 @@
       powerPreference: "high-performance",
     });
     promptRenderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    promptRenderer.setClearColor(0x000000, 0);
+    if ("outputColorSpace" in promptRenderer && THREE.SRGBColorSpace) {
+      promptRenderer.outputColorSpace = THREE.SRGBColorSpace;
+    }
 
     const promptScene = new THREE.Scene();
-    promptScene.fog = new THREE.FogExp2(0x041108, 0.09);
+    promptScene.fog = new THREE.FogExp2(0x041108, 0.045);
 
-    const promptCamera = new THREE.PerspectiveCamera(44, 1, 0.1, 60);
-    promptCamera.position.set(0, 0, 8.8);
-    promptScene.add(new THREE.AmbientLight(0xaaffcc, 0.8));
-    const keyLight = new THREE.PointLight(0x8cffb8, 1.4, 18, 2);
-    keyLight.position.set(2.5, 2.8, 4);
+    const promptCamera = new THREE.PerspectiveCamera(40, 1, 0.1, 80);
+    promptCamera.position.set(0, 0.1, isMobile ? 11.4 : 10.2);
+    promptScene.add(new THREE.AmbientLight(0xaaffcc, 0.95));
+    const keyLight = new THREE.PointLight(0x8cffb8, 1.8, 26, 2);
+    keyLight.position.set(3.2, 3.8, 7);
     promptScene.add(keyLight);
+    const fillLight = new THREE.PointLight(0x37ff8c, 1.1, 20, 2);
+    fillLight.position.set(-3.5, -2, 5.5);
+    promptScene.add(fillLight);
 
     const promptGroup = new THREE.Group();
     promptScene.add(promptGroup);
 
-    const planeGeometry = new THREE.PlaneGeometry(3.1, 1.82, 1, 1);
+    const planeGeometry = new THREE.PlaneGeometry(isMobile ? 2.45 : 2.9, isMobile ? 1.44 : 1.72, 1, 1);
     const panelMeshes = [];
     const nodeConnections = [];
     const raycaster = new THREE.Raycaster();
     const pointer = new THREE.Vector2(2, 2);
-    const targetRotation = { x: -0.08, y: 0.12 };
+    const targetRotation = { x: -0.04, y: 0.08 };
     let activeItemId = null;
     let viewportBounds = promptSceneCanvas.getBoundingClientRect();
-    const cameraTarget = new THREE.Vector3(0, 0, 0);
-    const cameraPositionTarget = new THREE.Vector3(0, 0, 8.8);
+    const sceneFocus = new THREE.Vector3(0, 0, 0);
 
     const starGeometry = new THREE.BufferGeometry();
     const starCount = 240;
@@ -405,7 +411,7 @@
     const linkMaterial = new THREE.LineBasicMaterial({
       color: 0x7dffb1,
       transparent: true,
-      opacity: 0.22,
+      opacity: 0.28,
       blending: THREE.AdditiveBlending,
     });
     const linkMesh = new THREE.LineSegments(linkGeometry, linkMaterial);
@@ -454,8 +460,8 @@
 
       activeItemId = nextActiveId;
       const count = records.length || 1;
-      const radiusBase = window.innerWidth < 720 ? 2.1 : 2.8;
-      const radiusSpread = window.innerWidth < 720 ? 1.2 : 1.8;
+      const radiusBase = window.innerWidth < 720 ? 1.95 : 2.55;
+      const radiusSpread = window.innerWidth < 720 ? 1.05 : 1.45;
       const goldenAngle = Math.PI * (3 - Math.sqrt(5));
 
       records.forEach((record, index) => {
@@ -464,14 +470,16 @@
           map: texture,
           transparent: true,
           opacity: 0.98,
+          side: THREE.DoubleSide,
+          toneMapped: false,
         });
         const mesh = new THREE.Mesh(planeGeometry, material);
         const radius = radiusBase + Math.sqrt((index + 0.35) / count) * radiusSpread;
         const angle = index * goldenAngle;
         const home = new THREE.Vector3(
-          Math.cos(angle) * radius * 1.18,
-          Math.sin(angle * 1.3) * (window.innerWidth < 720 ? 1.8 : 2.4),
-          Math.sin(angle * 0.7) * (window.innerWidth < 720 ? 1.1 : 1.8)
+          Math.cos(angle) * radius * 1.12,
+          Math.sin(angle * 1.2) * (window.innerWidth < 720 ? 1.5 : 2.05),
+          Math.sin(angle * 0.7) * (window.innerWidth < 720 ? 0.75 : 1.15)
         );
         mesh.userData.id = record.id;
         mesh.userData.home = home;
@@ -494,7 +502,7 @@
 
       const edges = [];
       const edgeKeys = new Set();
-      const maxDistance = window.innerWidth < 720 ? 4.25 : 5.2;
+      const maxDistance = window.innerWidth < 720 ? 3.55 : 4.4;
 
       for (let index = 0; index < panelMeshes.length; index += 1) {
         const mesh = panelMeshes[index];
@@ -555,7 +563,7 @@
         const home = mesh.userData.home;
         const targetX = home.x + Math.sin(phase) * mesh.userData.floatAmp;
         const targetY = home.y + Math.cos(phase * 1.1) * mesh.userData.floatAmp * 0.85;
-        const targetZ = home.z + Math.sin(phase * 0.8) * mesh.userData.floatAmp * 1.6 + focus * 0.85;
+        const targetZ = home.z + Math.sin(phase * 0.8) * mesh.userData.floatAmp * 1.2 + focus * 0.95;
 
         if (force) {
           mesh.position.set(targetX, targetY, targetZ);
@@ -565,7 +573,7 @@
           mesh.position.z += (targetZ - mesh.position.z) * 0.08;
         }
 
-        mesh.rotation.y += ((Math.sin(phase * 0.7) * 0.18 + focus * 0.08) - mesh.rotation.y) * 0.08;
+        mesh.rotation.y += ((Math.sin(phase * 0.7) * 0.18 + focus * 0.12) - mesh.rotation.y) * 0.08;
         mesh.rotation.x += ((Math.cos(phase * 0.6) * 0.08 - focus * 0.03) - mesh.rotation.x) * 0.08;
         mesh.rotation.z += (Math.sin(phase * 0.5) * 0.05 - mesh.rotation.z) * 0.08;
 
@@ -684,22 +692,17 @@
           mesh.material.opacity += (targetOpacity - mesh.material.opacity) * 0.12;
         });
 
-        const activeMesh = panelMeshes.find((mesh) => mesh.userData.id === activeItemId) || panelMeshes[0];
-        const activePosition = activeMesh ? activeMesh.position : cameraTarget;
-        cameraTarget.lerp(activePosition, 0.08);
-        selectionRing.position.lerp(activePosition, 0.12);
-        selectionRing.scale.setScalar(activeMesh && activeMesh.userData.id === activeItemId ? 1 : 0.92);
-
-        cameraPositionTarget.set(
-          cameraTarget.x * 0.18 + targetRotation.y * 0.9,
-          cameraTarget.y * 0.12 + targetRotation.x * -0.65,
-          (isMobile ? 9.8 : 8.8) - (activeMesh ? Math.max(activeMesh.position.z, 0) * 0.18 : 0)
-        );
-        promptCamera.position.lerp(cameraPositionTarget, 0.08);
-        promptCamera.lookAt(cameraTarget.x, cameraTarget.y, cameraTarget.z - 0.2);
-
         linkMaterial.opacity = 0.16 + Math.sin(now * 0.0012) * 0.04;
         updatePanelTransforms(now, false);
+        const activeMesh = panelMeshes.find((mesh) => mesh.userData.id === activeItemId) || panelMeshes[0];
+        const activePosition = activeMesh ? activeMesh.position : sceneFocus;
+        sceneFocus.lerp(activePosition, 0.08);
+        selectionRing.position.lerp(activePosition, 0.12);
+        selectionRing.scale.setScalar(activeMesh && activeMesh.userData.id === activeItemId ? 1 : 0.92);
+        promptCamera.position.x += ((targetRotation.y * 0.9) - promptCamera.position.x) * 0.06;
+        promptCamera.position.y += ((0.1 + targetRotation.x * -0.7) - promptCamera.position.y) * 0.06;
+        promptCamera.position.z += (((isMobile ? 11.4 : 10.2) - Math.max(activePosition.z, 0) * 0.15) - promptCamera.position.z) * 0.06;
+        promptCamera.lookAt(sceneFocus.x * 0.28, sceneFocus.y * 0.24, sceneFocus.z * 0.18);
         promptRenderer.render(promptScene, promptCamera);
       } else {
         promptRenderer.clear();
