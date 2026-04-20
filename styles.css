@@ -708,10 +708,13 @@ h2 {
   border: 0;
   border-radius: 0;
   background: transparent;
+  pointer-events: none;
 }
 
 .scene-3d .scene-viewport {
   height: 100vh;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .scene-3d .scene-legend {
@@ -721,6 +724,7 @@ h2 {
   max-width: min(560px, calc(100vw - 48px));
   background: rgba(3, 12, 7, 0.58);
   border-color: rgba(92, 255, 150, 0.24);
+  pointer-events: none;
 }
 
 .scene-3d .noise-layer {
