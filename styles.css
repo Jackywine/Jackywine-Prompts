@@ -76,6 +76,10 @@ input {
   min-width: 0;
 }
 
+.sidebar {
+  align-self: start;
+}
+
 .hero-block {
   margin-bottom: 16px;
   padding: 18px;
@@ -475,6 +479,12 @@ h2 {
     grid-template-columns: 1fr;
   }
 
+  .sidebar {
+    position: static;
+    max-height: none;
+    overflow: visible;
+  }
+
   .content-grid {
     grid-template-columns: 1fr;
   }
@@ -486,6 +496,16 @@ h2 {
 
   .markdown-body {
     max-height: none;
+  }
+}
+
+@media (min-width: 1181px) {
+  .sidebar {
+    position: sticky;
+    top: 20px;
+    max-height: calc(100vh - 40px);
+    overflow: auto;
+    padding-right: 4px;
   }
 }
 
