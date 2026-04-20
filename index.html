@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Jackywine Prompt Library</title>
+    <meta
+      name="description"
+      content="把常用提示词整理成可浏览、可检索、可复制的静态网页。"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand-block">
+          <p class="eyebrow">Prompt Library</p>
+          <h1>Jackywine 常用提示词库</h1>
+          <p class="brand-copy">
+            把分散的 Markdown 提示词，整理成一个可分类浏览、全文检索和快速复制的静态站点。
+          </p>
+        </div>
+
+        <section class="panel stats-panel" aria-label="总览">
+          <div>
+            <span class="stat-label">提示词总数</span>
+            <strong id="promptCount">0</strong>
+          </div>
+          <div>
+            <span class="stat-label">当前分类</span>
+            <strong id="activeCategoryName">全部</strong>
+          </div>
+        </section>
+
+        <section class="panel search-panel" aria-label="搜索与筛选">
+          <label class="field-label" for="searchInput">搜索标题、摘要、正文</label>
+          <input id="searchInput" type="search" placeholder="例如：深度研究 / 标题 / 矛盾分析" />
+          <div id="categoryFilters" class="filter-list"></div>
+        </section>
+
+        <section class="panel summary-panel" aria-label="分类说明">
+          <h2>分类说明</h2>
+          <div id="categorySummary" class="summary-list"></div>
+        </section>
+      </aside>
+
+      <main class="main-content">
+        <section class="toolbar">
+          <p id="resultMeta">正在载入提示词…</p>
+        </section>
+
+        <section class="content-grid">
+          <div class="panel list-panel">
+            <div id="cardList" class="card-list"></div>
+          </div>
+
+          <article class="panel detail-panel" id="detailPanel">
+            <div class="detail-empty" id="detailEmpty">
+              选择左侧提示词后，在这里查看完整内容。
+            </div>
+            <div class="detail-content is-hidden" id="detailContent">
+              <div class="detail-header">
+                <div>
+                  <p class="detail-category" id="detailCategory"></p>
+                  <h2 id="detailTitle"></h2>
+                </div>
+                <button class="copy-button" id="copyButton" type="button">复制提示词</button>
+              </div>
+              <p class="detail-summary" id="detailSummary"></p>
+              <div class="tag-row" id="detailTags"></div>
+              <div class="markdown-body" id="detailBody"></div>
+            </div>
+          </article>
+        </section>
+      </main>
+    </div>
+
+    <script src="./data/prompts.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>
