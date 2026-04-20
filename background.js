@@ -5,6 +5,7 @@
 
   const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   let webglActive = false;
+  let sceneMode = document.body.classList.contains("scene-3d") ? "3d" : "2d";
 
   function sizeCanvas(canvas, contextScale) {
     const ratio = Math.min(window.devicePixelRatio || 1, 2);
@@ -65,8 +66,9 @@
         float scan = 0.08 * sin((uv.y + uTime * 0.06) * 150.0);
         float vignette = smoothstep(1.18, 0.25, distance(uv, vec2(0.5)));
         float symbol = step(0.6, hash(vec2(floor(uv.x * columns), floor((uv.y + uTime * 0.2) * 54.0))));
+        float depth = 0.5 + 0.5 * sin(uTime * 0.35 + uv.x * 8.0);
         vec3 color = vec3(0.01, 0.09, 0.03);
-        color += vec3(0.12, 0.95, 0.38) * glow * (0.5 + 0.5 * symbol);
+        color += vec3(0.12, 0.95, 0.38) * glow * (0.5 + 0.5 * symbol) * mix(0.85, 1.2, depth);
         color += vec3(0.02, 0.18, 0.07) * scan;
         color *= vignette;
         gl_FragColor = vec4(color, 0.88);
@@ -115,7 +117,8 @@
       gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
       gl.enableVertexAttribArray(position);
       gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 0, 0);
-      gl.uniform1f(timeLocation, prefersReducedMotion ? 0.0 : now * 0.001);
+      const speed = sceneMode === "3d" ? 1.45 : 1.0;
+      gl.uniform1f(timeLocation, prefersReducedMotion ? 0.0 : now * 0.001 * speed);
       gl.uniform2f(resolutionLocation, webglCanvas.width, webglCanvas.height);
       gl.drawArrays(gl.TRIANGLES, 0, 6);
       requestAnimationFrame(frame);
@@ -145,7 +148,8 @@
 
     function draw(timestamp) {
       const delta = timestamp - last;
-      if (delta < (prefersReducedMotion ? 140 : 60)) {
+      const cadence = sceneMode === "3d" ? 44 : 60;
+      if (delta < (prefersReducedMotion ? 140 : cadence)) {
         requestAnimationFrame(draw);
         return;
       }
@@ -158,7 +162,8 @@
       for (let index = 0; index < columns.length; index += 1) {
         const y = columns[index] * fontSize;
         const x = index * fontSize;
-        const char = Math.random() > 0.992 ? "JACKYWINE" : glyphs[Math.floor(Math.random() * glyphs.length)];
+        const burstChance = sceneMode === "3d" ? 0.985 : 0.992;
+        const char = Math.random() > burstChance ? "JACKYWINE" : glyphs[Math.floor(Math.random() * glyphs.length)];
         context.fillStyle = Math.random() > 0.96 ? "#d7ffe4" : "#69ff9d";
         context.fillText(char, x, y);
         if (y > window.innerHeight + Math.random() * 200 && Math.random() > 0.98) {
@@ -181,4 +186,8 @@
     fallbackCanvas.style.display = "block";
     startFallback();
   }
+
+  window.addEventListener("prompt-scene-mode-change", (event) => {
+    sceneMode = event.detail && event.detail.mode === "3d" ? "3d" : "2d";
+  });
 })();

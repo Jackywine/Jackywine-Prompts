@@ -31,6 +31,8 @@
     },
   };
 
+  const STORAGE_KEY = "jackywine-prompt-scene-mode";
+
   const promptCount = document.getElementById("promptCount");
   const activeCategoryName = document.getElementById("activeCategoryName");
   const resultMeta = document.getElementById("resultMeta");
@@ -46,14 +48,17 @@
   const detailTags = document.getElementById("detailTags");
   const detailBody = document.getElementById("detailBody");
   const copyButton = document.getElementById("copyButton");
-  const splitViewButton = document.getElementById("splitViewButton");
-  const waterfallViewButton = document.getElementById("waterfallViewButton");
-  const contentGrid = document.querySelector(".content-grid");
+  const detailDrawer = document.getElementById("detailDrawer");
+  const drawerBackdrop = document.getElementById("drawerBackdrop");
+  const drawerCloseButton = document.getElementById("drawerCloseButton");
+  const drawerDismissButton = document.getElementById("drawerDismissButton");
+  const mode2dButton = document.getElementById("mode2dButton");
+  const mode3dButton = document.getElementById("mode3dButton");
 
   let activeCategory = "all";
   let activeItemId = null;
   let query = "";
-  let viewMode = "split";
+  let sceneMode = localStorage.getItem(STORAGE_KEY) === "3d" ? "3d" : "2d";
 
   function getCategoryMeta(categoryId) {
     const raw = categories.find((category) => category.id === categoryId) || { id: categoryId };
@@ -185,6 +190,27 @@
     });
   }
 
+  function applySceneMode() {
+    document.body.classList.toggle("scene-2d", sceneMode === "2d");
+    document.body.classList.toggle("scene-3d", sceneMode === "3d");
+    mode2dButton.classList.toggle("is-active", sceneMode === "2d");
+    mode3dButton.classList.toggle("is-active", sceneMode === "3d");
+    localStorage.setItem(STORAGE_KEY, sceneMode);
+    window.dispatchEvent(new CustomEvent("prompt-scene-mode-change", { detail: { mode: sceneMode } }));
+  }
+
+  function openDrawer() {
+    detailDrawer.classList.remove("is-hidden");
+    drawerBackdrop.classList.remove("is-hidden");
+    drawerDismissButton.classList.remove("is-hidden");
+  }
+
+  function closeDrawer() {
+    detailDrawer.classList.add("is-hidden");
+    drawerBackdrop.classList.add("is-hidden");
+    drawerDismissButton.classList.add("is-hidden");
+  }
+
   function renderCategoryFilters() {
     const counts = items.reduce((accumulator, item) => {
       accumulator[item.category] = (accumulator[item.category] || 0) + 1;
@@ -238,6 +264,27 @@
       .join("");
   }
 
+  function setCardTilt(card, event) {
+    if (sceneMode !== "3d") {
+      card.style.removeProperty("--tilt-x");
+      card.style.removeProperty("--tilt-y");
+      return;
+    }
+    const rect = card.getBoundingClientRect();
+    const x = (event.clientX - rect.left) / rect.width - 0.5;
+    const y = (event.clientY - rect.top) / rect.height - 0.5;
+    card.style.setProperty("--tilt-y", `${x * 10}deg`);
+    card.style.setProperty("--tilt-x", `${y * -10}deg`);
+  }
+
+  function bindCardMotion(card) {
+    card.addEventListener("mousemove", (event) => setCardTilt(card, event));
+    card.addEventListener("mouseleave", () => {
+      card.style.removeProperty("--tilt-x");
+      card.style.removeProperty("--tilt-y");
+    });
+  }
+
   function renderCards(filteredItems) {
     if (!filteredItems.length) {
       cardList.innerHTML = '<div class="empty-state">No records matched the current query.</div>';
@@ -249,31 +296,39 @@
     }
 
     cardList.innerHTML = filteredItems
-      .map((item) => {
+      .map((item, index) => {
         const categoryMeta = getCategoryMeta(item.category);
         const tags = (item.tags || []).map((tag) => `<span class="tag-chip">${tag}</span>`).join("");
         return `
-          <button type="button" class="prompt-card ${item.id === activeItemId ? "is-active" : ""}" data-id="${item.id}">
-            <h3>${item.title}</h3>
-            <p>${item.summary}</p>
-            <div class="card-meta">
-              <span>${categoryMeta.name}</span>
-              <span>${item.filename}</span>
+          <button
+            type="button"
+            class="prompt-card ${item.id === activeItemId ? "is-active" : ""}"
+            data-id="${item.id}"
+            style="--depth-index:${index % 9}"
+          >
+            <div class="prompt-card-inner">
+              <div class="card-headline">
+                <h3>${item.title}</h3>
+                <span class="card-ghost">${String(index + 1).padStart(2, "0")}</span>
+              </div>
+              <p>${item.summary}</p>
+              <div class="card-meta">
+                <span>${categoryMeta.name}</span>
+                <span>${item.filename}</span>
+              </div>
+              <div class="tag-row">${tags}</div>
             </div>
-            <div class="tag-row">${tags}</div>
           </button>
         `;
       })
       .join("");
 
     [...cardList.querySelectorAll("[data-id]")].forEach((button) => {
+      bindCardMotion(button);
       button.addEventListener("click", () => {
         activeItemId = button.dataset.id;
-        if (viewMode === "waterfall") {
-          render();
-          return;
-        }
         render();
+        openDrawer();
       });
     });
   }
@@ -312,14 +367,11 @@
     promptCount.textContent = String(items.length).padStart(2, "0");
     activeCategoryName.textContent = categoryMeta.name;
     resultMeta.textContent = `Showing ${filteredItems.length} of ${items.length} prompt records`;
-    contentGrid.classList.toggle("is-waterfall", viewMode === "waterfall");
-    cardList.classList.toggle("is-waterfall", viewMode === "waterfall");
-    splitViewButton.classList.toggle("is-active", viewMode === "split");
-    waterfallViewButton.classList.toggle("is-active", viewMode === "waterfall");
     renderCategoryFilters();
     renderCategorySummary();
     renderCards(filteredItems);
     renderDetail(filteredItems);
+    applySceneMode();
   }
 
   searchInput.addEventListener("input", (event) => {
@@ -327,14 +379,24 @@
     render();
   });
 
-  splitViewButton.addEventListener("click", () => {
-    viewMode = "split";
+  mode2dButton.addEventListener("click", () => {
+    sceneMode = "2d";
     render();
   });
 
-  waterfallViewButton.addEventListener("click", () => {
-    viewMode = "waterfall";
+  mode3dButton.addEventListener("click", () => {
+    sceneMode = "3d";
     render();
+  });
+
+  drawerCloseButton.addEventListener("click", closeDrawer);
+  drawerDismissButton.addEventListener("click", closeDrawer);
+  drawerBackdrop.addEventListener("click", closeDrawer);
+
+  window.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      closeDrawer();
+    }
   });
 
   render();
