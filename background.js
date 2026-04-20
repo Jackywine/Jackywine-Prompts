@@ -305,6 +305,7 @@
     if (!window.THREE) return false;
 
     const THREE = window.THREE;
+    const isMobile = window.matchMedia("(max-width: 720px)").matches;
     const ambientRenderer = new THREE.WebGLRenderer({
       canvas: matrixThreeCanvas,
       alpha: true,
@@ -359,8 +360,8 @@
     const promptScene = new THREE.Scene();
     promptScene.fog = new THREE.FogExp2(0x041108, 0.09);
 
-    const promptCamera = new THREE.PerspectiveCamera(42, 1, 0.1, 60);
-    promptCamera.position.set(0, 0, 7.8);
+    const promptCamera = new THREE.PerspectiveCamera(44, 1, 0.1, 60);
+    promptCamera.position.set(0, 0, 8.8);
     promptScene.add(new THREE.AmbientLight(0xaaffcc, 0.8));
     const keyLight = new THREE.PointLight(0x8cffb8, 1.4, 18, 2);
     keyLight.position.set(2.5, 2.8, 4);
@@ -371,12 +372,14 @@
 
     const planeGeometry = new THREE.PlaneGeometry(3.1, 1.82, 1, 1);
     const panelMeshes = [];
+    const nodeConnections = [];
     const raycaster = new THREE.Raycaster();
     const pointer = new THREE.Vector2(2, 2);
-    const targetRotation = { x: -0.18, y: 0.12 };
-    let orbitOffset = 0;
+    const targetRotation = { x: -0.08, y: 0.12 };
     let activeItemId = null;
     let viewportBounds = promptSceneCanvas.getBoundingClientRect();
+    const cameraTarget = new THREE.Vector3(0, 0, 0);
+    const cameraPositionTarget = new THREE.Vector3(0, 0, 8.8);
 
     const starGeometry = new THREE.BufferGeometry();
     const starCount = 240;
@@ -398,16 +401,26 @@
     const stars = new THREE.Points(starGeometry, starMaterial);
     promptScene.add(stars);
 
+    const linkGeometry = new THREE.BufferGeometry();
+    const linkMaterial = new THREE.LineBasicMaterial({
+      color: 0x7dffb1,
+      transparent: true,
+      opacity: 0.22,
+      blending: THREE.AdditiveBlending,
+    });
+    const linkMesh = new THREE.LineSegments(linkGeometry, linkMaterial);
+    promptScene.add(linkMesh);
+
     const selectionRing = new THREE.Mesh(
-      new THREE.TorusGeometry(2.08, 0.025, 12, 80),
+      new THREE.TorusGeometry(2.28, 0.03, 16, 112),
       new THREE.MeshBasicMaterial({
         color: 0x85ffb6,
         transparent: true,
-        opacity: 0.35,
+        opacity: 0.42,
       })
     );
-    selectionRing.rotation.x = Math.PI / 2;
-    selectionRing.position.z = -2.2;
+    selectionRing.rotation.x = Math.PI / 2.1;
+    selectionRing.position.z = 0;
     promptScene.add(selectionRing);
 
     function resize() {
@@ -437,11 +450,13 @@
       while (panelMeshes.length) {
         disposeMesh(panelMeshes.pop());
       }
+      nodeConnections.length = 0;
 
       activeItemId = nextActiveId;
       const count = records.length || 1;
-      const spacingY = window.innerWidth < 720 ? 1.9 : 1.4;
-      const depthWave = window.innerWidth < 720 ? 0.35 : 0.7;
+      const radiusBase = window.innerWidth < 720 ? 2.1 : 2.8;
+      const radiusSpread = window.innerWidth < 720 ? 1.2 : 1.8;
+      const goldenAngle = Math.PI * (3 - Math.sqrt(5));
 
       records.forEach((record, index) => {
         const texture = makePanelTexture(THREE, record, record.id === activeItemId);
@@ -451,31 +466,120 @@
           opacity: 0.98,
         });
         const mesh = new THREE.Mesh(planeGeometry, material);
+        const radius = radiusBase + Math.sqrt((index + 0.35) / count) * radiusSpread;
+        const angle = index * goldenAngle;
+        const home = new THREE.Vector3(
+          Math.cos(angle) * radius * 1.18,
+          Math.sin(angle * 1.3) * (window.innerWidth < 720 ? 1.8 : 2.4),
+          Math.sin(angle * 0.7) * (window.innerWidth < 720 ? 1.1 : 1.8)
+        );
         mesh.userData.id = record.id;
-        mesh.userData.baseY = (index - (count - 1) / 2) * -spacingY;
-        mesh.userData.baseZ = Math.sin(index * 0.55) * depthWave;
-        mesh.userData.baseX = Math.cos(index * 0.35) * 0.45;
+        mesh.userData.home = home;
+        mesh.userData.floatPhase = angle * 0.4;
+        mesh.userData.floatAmp = 0.12 + (index % 5) * 0.018;
+        mesh.userData.floatSpeed = 0.55 + (index % 7) * 0.06;
         mesh.userData.order = index;
         promptGroup.add(mesh);
         panelMeshes.push(mesh);
       });
+
+      buildConnections();
     }
 
-    function updatePanelTransforms(force) {
+    function buildConnections() {
+      if (panelMeshes.length < 2) {
+        linkGeometry.setAttribute("position", new THREE.Float32BufferAttribute([], 3));
+        return;
+      }
+
+      const edges = [];
+      const edgeKeys = new Set();
+      const maxDistance = window.innerWidth < 720 ? 4.25 : 5.2;
+
+      for (let index = 0; index < panelMeshes.length; index += 1) {
+        const mesh = panelMeshes[index];
+        const neighbors = [];
+
+        for (let candidateIndex = 0; candidateIndex < panelMeshes.length; candidateIndex += 1) {
+          if (candidateIndex === index) continue;
+          const candidate = panelMeshes[candidateIndex];
+          const distance = mesh.userData.home.distanceTo(candidate.userData.home);
+          neighbors.push({ index: candidateIndex, distance });
+        }
+
+        neighbors
+          .sort((left, right) => left.distance - right.distance)
+          .slice(0, 3)
+          .forEach((neighbor) => {
+            if (neighbor.distance > maxDistance) return;
+            const from = Math.min(index, neighbor.index);
+            const to = Math.max(index, neighbor.index);
+            const key = `${from}:${to}`;
+            if (edgeKeys.has(key)) return;
+            edgeKeys.add(key);
+            edges.push([from, to]);
+          });
+      }
+
+      nodeConnections.push(...edges);
+      const positions = new Float32Array(nodeConnections.length * 6);
+      linkGeometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+      linkGeometry.computeBoundingSphere();
+    }
+
+    function updateLineGeometry() {
+      const attribute = linkGeometry.getAttribute("position");
+      if (!attribute) return;
+      const positions = attribute.array;
+
+      nodeConnections.forEach((edge, index) => {
+        const from = panelMeshes[edge[0]];
+        const to = panelMeshes[edge[1]];
+        const offset = index * 6;
+
+        positions[offset] = from.position.x;
+        positions[offset + 1] = from.position.y;
+        positions[offset + 2] = from.position.z;
+        positions[offset + 3] = to.position.x;
+        positions[offset + 4] = to.position.y;
+        positions[offset + 5] = to.position.z;
+      });
+
+      attribute.needsUpdate = true;
+    }
+
+    function updatePanelTransforms(now, force) {
       panelMeshes.forEach((mesh) => {
         const focus = mesh.userData.id === activeItemId ? 1 : 0;
-        const y = mesh.userData.baseY + orbitOffset * 1.12;
-        mesh.position.x = mesh.userData.baseX + focus * 0.22;
-        mesh.position.y = y;
-        mesh.position.z = mesh.userData.baseZ + focus * 0.8;
-        mesh.rotation.y = THREE.MathUtils.degToRad(mesh.position.y * -2.8 + (focus ? 3 : 0));
-        mesh.rotation.x = THREE.MathUtils.degToRad(mesh.position.y * -1.6);
-        const scale = focus ? 1.08 : 0.93;
-        mesh.scale.setScalar(scale);
+        const phase = now * 0.001 * (prefersReducedMotion ? 0.18 : mesh.userData.floatSpeed) + mesh.userData.floatPhase;
+        const home = mesh.userData.home;
+        const targetX = home.x + Math.sin(phase) * mesh.userData.floatAmp;
+        const targetY = home.y + Math.cos(phase * 1.1) * mesh.userData.floatAmp * 0.85;
+        const targetZ = home.z + Math.sin(phase * 0.8) * mesh.userData.floatAmp * 1.6 + focus * 0.85;
+
+        if (force) {
+          mesh.position.set(targetX, targetY, targetZ);
+        } else {
+          mesh.position.x += (targetX - mesh.position.x) * 0.08;
+          mesh.position.y += (targetY - mesh.position.y) * 0.08;
+          mesh.position.z += (targetZ - mesh.position.z) * 0.08;
+        }
+
+        mesh.rotation.y += ((Math.sin(phase * 0.7) * 0.18 + focus * 0.08) - mesh.rotation.y) * 0.08;
+        mesh.rotation.x += ((Math.cos(phase * 0.6) * 0.08 - focus * 0.03) - mesh.rotation.x) * 0.08;
+        mesh.rotation.z += (Math.sin(phase * 0.5) * 0.05 - mesh.rotation.z) * 0.08;
+
+        const scale = focus ? 1.1 : 0.92;
+        mesh.scale.x += (scale - mesh.scale.x) * 0.1;
+        mesh.scale.y += (scale - mesh.scale.y) * 0.1;
+        mesh.scale.z += (scale - mesh.scale.z) * 0.1;
+
         if (force) {
           mesh.material.opacity = focus ? 1 : 0.82;
         }
       });
+
+      updateLineGeometry();
     }
 
     function selectByOffset(direction) {
@@ -488,7 +592,6 @@
       const nextMesh = panelMeshes[nextIndex];
       if (!nextMesh || nextMesh.userData.id === activeItemId) return;
       activeItemId = nextMesh.userData.id;
-      orbitOffset = -nextMesh.userData.baseY / 1.12;
       window.dispatchEvent(new CustomEvent("prompt-record-selected", { detail: { id: activeItemId } }));
     }
 
@@ -513,7 +616,6 @@
       if (!hits.length) return;
       const hit = hits[0].object;
       activeItemId = hit.userData.id;
-      orbitOffset = -hit.userData.baseY / 1.12;
       window.dispatchEvent(new CustomEvent("prompt-record-selected", { detail: { id: activeItemId } }));
     });
 
@@ -542,15 +644,13 @@
       const detail = event.detail || {};
       syncPanels(detail.items || [], detail.activeItemId || null);
       activeItemId = detail.activeItemId || null;
-      const activeMesh = panelMeshes.find((mesh) => mesh.userData.id === activeItemId);
-      orbitOffset = activeMesh ? -activeMesh.userData.baseY / 1.12 : 0;
-      updatePanelTransforms(true);
+      updatePanelTransforms(performance.now(), true);
     });
 
     resize();
     threeReady = true;
 
-    function animate() {
+    function animate(now) {
       for (const bar of rainBars) {
         bar.mesh.position.y -= prefersReducedMotion ? 0.004 : bar.speed;
         bar.mesh.position.x += bar.drift;
@@ -572,9 +672,10 @@
       ambientRenderer.render(ambientScene, ambientCamera);
 
       if (sceneMode === "3d") {
-        promptGroup.rotation.x += (targetRotation.x - promptGroup.rotation.x) * 0.06;
-        promptGroup.rotation.y += (targetRotation.y - promptGroup.rotation.y) * 0.06;
+        promptGroup.rotation.x += (targetRotation.x - promptGroup.rotation.x) * 0.04;
+        promptGroup.rotation.y += (targetRotation.y - promptGroup.rotation.y) * 0.04;
         stars.rotation.y += prefersReducedMotion ? 0.0005 : 0.0014;
+        stars.rotation.x += prefersReducedMotion ? 0.0002 : 0.00035;
         selectionRing.rotation.z += prefersReducedMotion ? 0.0008 : 0.0022;
 
         panelMeshes.forEach((mesh) => {
@@ -583,7 +684,22 @@
           mesh.material.opacity += (targetOpacity - mesh.material.opacity) * 0.12;
         });
 
-        updatePanelTransforms(false);
+        const activeMesh = panelMeshes.find((mesh) => mesh.userData.id === activeItemId) || panelMeshes[0];
+        const activePosition = activeMesh ? activeMesh.position : cameraTarget;
+        cameraTarget.lerp(activePosition, 0.08);
+        selectionRing.position.lerp(activePosition, 0.12);
+        selectionRing.scale.setScalar(activeMesh && activeMesh.userData.id === activeItemId ? 1 : 0.92);
+
+        cameraPositionTarget.set(
+          cameraTarget.x * 0.18 + targetRotation.y * 0.9,
+          cameraTarget.y * 0.12 + targetRotation.x * -0.65,
+          (isMobile ? 9.8 : 8.8) - (activeMesh ? Math.max(activeMesh.position.z, 0) * 0.18 : 0)
+        );
+        promptCamera.position.lerp(cameraPositionTarget, 0.08);
+        promptCamera.lookAt(cameraTarget.x, cameraTarget.y, cameraTarget.z - 0.2);
+
+        linkMaterial.opacity = 0.16 + Math.sin(now * 0.0012) * 0.04;
+        updatePanelTransforms(now, false);
         promptRenderer.render(promptScene, promptCamera);
       } else {
         promptRenderer.clear();
