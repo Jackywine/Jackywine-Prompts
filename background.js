@@ -1,15 +1,16 @@
 (function () {
   const webglCanvas = document.getElementById("matrixWebgl");
   const fallbackCanvas = document.getElementById("matrixFallback");
-  const threeCanvas = document.getElementById("matrixThree");
-  if (!webglCanvas || !fallbackCanvas || !threeCanvas) return;
+  const matrixThreeCanvas = document.getElementById("matrixThree");
+  const promptSceneCanvas = document.getElementById("promptThreeScene");
+  if (!webglCanvas || !fallbackCanvas || !matrixThreeCanvas || !promptSceneCanvas) return;
 
   const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   let webglActive = false;
   let sceneMode = document.body.classList.contains("scene-3d") ? "3d" : "2d";
   let twoDReady = false;
   let threeReady = false;
-  let threeState = null;
+  let refreshThreeLayout = function () {};
 
   function sizeCanvas(canvas, contextScale) {
     const ratio = Math.min(window.devicePixelRatio || 1, 2);
@@ -121,8 +122,7 @@
       gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
       gl.enableVertexAttribArray(position);
       gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 0, 0);
-      const speed = sceneMode === "3d" ? 1.45 : 1.0;
-      gl.uniform1f(timeLocation, prefersReducedMotion ? 0.0 : now * 0.001 * speed);
+      gl.uniform1f(timeLocation, prefersReducedMotion ? 0.0 : now * 0.001);
       gl.uniform2f(resolutionLocation, webglCanvas.width, webglCanvas.height);
       gl.drawArrays(gl.TRIANGLES, 0, 6);
       requestAnimationFrame(frame);
@@ -139,22 +139,21 @@
 
     const glyphs = "01アイウエオカキクケコサシスセソABCDEFGHIJKLMNOPQRSTUVWXYZ";
     let columns = [];
-    let columnCount = 0;
     let fontSize = 16;
     let last = 0;
 
     function setup() {
       sizeCanvas(fallbackCanvas, context);
       fontSize = window.innerWidth < 640 ? 14 : 16;
-      columnCount = Math.ceil(window.innerWidth / fontSize);
+      const columnCount = Math.ceil(window.innerWidth / fontSize);
       columns = Array.from({ length: columnCount }, () => Math.random() * -40);
       context.font = `${fontSize}px monospace`;
     }
 
     function draw(timestamp) {
       const delta = timestamp - last;
-      const cadence = sceneMode === "3d" ? 44 : 60;
-      if (delta < (prefersReducedMotion ? 140 : cadence)) {
+      const cadence = prefersReducedMotion ? 140 : 60;
+      if (delta < cadence) {
         requestAnimationFrame(draw);
         return;
       }
@@ -162,13 +161,11 @@
 
       context.fillStyle = "rgba(2, 5, 3, 0.18)";
       context.fillRect(0, 0, window.innerWidth, window.innerHeight);
-      context.fillStyle = "#69ff9d";
 
       for (let index = 0; index < columns.length; index += 1) {
         const y = columns[index] * fontSize;
         const x = index * fontSize;
-        const burstChance = sceneMode === "3d" ? 0.985 : 0.992;
-        const char = Math.random() > burstChance ? "JACKYWINE" : glyphs[Math.floor(Math.random() * glyphs.length)];
+        const char = Math.random() > 0.992 ? "JACKYWINE" : glyphs[Math.floor(Math.random() * glyphs.length)];
         context.fillStyle = Math.random() > 0.96 ? "#d7ffe4" : "#69ff9d";
         context.fillText(char, x, y);
         if (y > window.innerHeight + Math.random() * 200 && Math.random() > 0.98) {
@@ -191,127 +188,370 @@
     const showThree = sceneMode === "3d" && threeReady;
     webglCanvas.classList.toggle("is-hidden", showThree || !twoDReady);
     fallbackCanvas.classList.toggle("is-hidden", showThree || !twoDReady);
-    threeCanvas.classList.toggle("is-hidden", !showThree);
+    matrixThreeCanvas.classList.toggle("is-hidden", !showThree);
+  }
+
+  function makePanelTexture(THREE, record, isActive) {
+    const width = 768;
+    const height = 448;
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+
+    const border = isActive ? "rgba(164, 255, 207, 0.95)" : "rgba(92, 255, 150, 0.4)";
+    const fillTop = isActive ? "#082817" : "#05150c";
+    const fillBottom = isActive ? "#031109" : "#020a05";
+
+    const gradient = ctx.createLinearGradient(0, 0, 0, height);
+    gradient.addColorStop(0, fillTop);
+    gradient.addColorStop(1, fillBottom);
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, width, height);
+
+    ctx.strokeStyle = border;
+    ctx.lineWidth = 4;
+    ctx.strokeRect(10, 10, width - 20, height - 20);
+
+    ctx.fillStyle = "rgba(92, 255, 150, 0.08)";
+    for (let i = 0; i < 9; i += 1) {
+      ctx.fillRect(24, 52 + i * 42, width - 48, 1);
+    }
+
+    ctx.fillStyle = "#7dd99a";
+    ctx.font = "22px monospace";
+    ctx.fillText(record.category.toUpperCase(), 34, 44);
+
+    ctx.fillStyle = isActive ? "#f0fff6" : "#dcffe8";
+    ctx.font = "bold 42px monospace";
+    wrapCanvasText(ctx, record.title, 34, 98, width - 68, 48, 3);
+
+    ctx.fillStyle = "#bdf6cf";
+    ctx.font = "24px monospace";
+    wrapCanvasText(ctx, record.summary, 34, 220, width - 68, 32, 5);
+
+    ctx.fillStyle = "#76c58e";
+    ctx.font = "18px monospace";
+    ctx.fillText(record.filename.toUpperCase(), 34, height - 54);
+
+    const tags = (record.tags || []).slice(0, 4);
+    let cursorX = 34;
+    const tagY = height - 104;
+    for (const tag of tags) {
+      const text = tag.toUpperCase();
+      const textWidth = ctx.measureText(text).width;
+      const pillWidth = textWidth + 24;
+      ctx.fillStyle = "rgba(92, 255, 150, 0.12)";
+      roundRect(ctx, cursorX, tagY - 18, pillWidth, 34, 16);
+      ctx.fill();
+      ctx.strokeStyle = "rgba(92, 255, 150, 0.28)";
+      ctx.lineWidth = 1.5;
+      roundRect(ctx, cursorX, tagY - 18, pillWidth, 34, 16);
+      ctx.stroke();
+      ctx.fillStyle = "#d9ffea";
+      ctx.fillText(text, cursorX + 12, tagY + 4);
+      cursorX += pillWidth + 10;
+      if (cursorX > width - 180) break;
+    }
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.anisotropy = 4;
+    texture.needsUpdate = true;
+    return texture;
+  }
+
+  function wrapCanvasText(ctx, text, x, y, maxWidth, lineHeight, maxLines) {
+    const words = text.split(/\s+/);
+    let line = "";
+    let lines = 0;
+
+    for (let index = 0; index < words.length; index += 1) {
+      const candidate = line ? `${line} ${words[index]}` : words[index];
+      if (ctx.measureText(candidate).width <= maxWidth) {
+        line = candidate;
+        continue;
+      }
+
+      ctx.fillText(line, x, y + lines * lineHeight);
+      lines += 1;
+      if (lines === maxLines - 1) {
+        const tail = words.slice(index).join(" ");
+        let clipped = tail;
+        while (ctx.measureText(`${clipped}...`).width > maxWidth && clipped.length > 0) {
+          clipped = clipped.slice(0, -1);
+        }
+        ctx.fillText(`${clipped}...`, x, y + lines * lineHeight);
+        return;
+      }
+      line = words[index];
+    }
+
+    if (line && lines < maxLines) {
+      ctx.fillText(line, x, y + lines * lineHeight);
+    }
+  }
+
+  function roundRect(ctx, x, y, width, height, radius) {
+    ctx.beginPath();
+    ctx.moveTo(x + radius, y);
+    ctx.arcTo(x + width, y, x + width, y + height, radius);
+    ctx.arcTo(x + width, y + height, x, y + height, radius);
+    ctx.arcTo(x, y + height, x, y, radius);
+    ctx.arcTo(x, y, x + width, y, radius);
+    ctx.closePath();
   }
 
   function startThreeScene() {
     if (!window.THREE) return false;
 
     const THREE = window.THREE;
-    const renderer = new THREE.WebGLRenderer({
-      canvas: threeCanvas,
+    const ambientRenderer = new THREE.WebGLRenderer({
+      canvas: matrixThreeCanvas,
       alpha: true,
       antialias: true,
       powerPreference: "high-performance",
     });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    ambientRenderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
 
-    const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x041108, 0.045);
+    const ambientScene = new THREE.Scene();
+    ambientScene.fog = new THREE.FogExp2(0x041108, 0.05);
+    const ambientCamera = new THREE.PerspectiveCamera(52, 1, 0.1, 90);
+    ambientCamera.position.set(0, 0.7, 8.5);
+    ambientScene.add(new THREE.AmbientLight(0x77ffaa, 0.7));
+    const ambientLight = new THREE.PointLight(0x55ff99, 1.4, 20, 2);
+    ambientLight.position.set(0, 4, 4);
+    ambientScene.add(ambientLight);
 
-    const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 80);
-    camera.position.set(0, 0.8, 7.2);
+    const rainGroup = new THREE.Group();
+    ambientScene.add(rainGroup);
 
-    const ambient = new THREE.AmbientLight(0x88ffbb, 0.65);
-    const point = new THREE.PointLight(0x55ff99, 1.4, 18, 2);
-    point.position.set(0, 4, 3);
-    scene.add(ambient, point);
-
-    const group = new THREE.Group();
-    scene.add(group);
-
-    const bars = [];
     const barGeometry = new THREE.BoxGeometry(0.08, 1, 0.08);
-    for (let index = 0; index < 180; index += 1) {
-      const height = THREE.MathUtils.randFloat(0.5, 2.8);
+    const rainBars = [];
+    for (let index = 0; index < 170; index += 1) {
       const material = new THREE.MeshBasicMaterial({
-        color: new THREE.Color().setHSL(0.35, 0.95, THREE.MathUtils.randFloat(0.38, 0.62)),
+        color: new THREE.Color().setHSL(0.35, 0.95, THREE.MathUtils.randFloat(0.38, 0.64)),
         transparent: true,
-        opacity: THREE.MathUtils.randFloat(0.28, 0.92),
+        opacity: THREE.MathUtils.randFloat(0.24, 0.82),
       });
       const mesh = new THREE.Mesh(barGeometry, material);
-      mesh.scale.y = height;
+      mesh.scale.y = THREE.MathUtils.randFloat(0.5, 2.7);
       mesh.position.set(
         THREE.MathUtils.randFloatSpread(11),
         THREE.MathUtils.randFloat(-6, 8),
         THREE.MathUtils.randFloatSpread(14)
       );
-      group.add(mesh);
-      bars.push({
+      rainGroup.add(mesh);
+      rainBars.push({
         mesh,
-        speed: THREE.MathUtils.randFloat(0.012, 0.045),
-        drift: THREE.MathUtils.randFloat(-0.004, 0.004),
+        speed: THREE.MathUtils.randFloat(0.012, 0.04),
+        drift: THREE.MathUtils.randFloat(-0.003, 0.003),
       });
     }
 
-    const particleCount = 900;
-    const positions = new Float32Array(particleCount * 3);
-    const alphas = new Float32Array(particleCount);
-    for (let i = 0; i < particleCount; i += 1) {
-      positions[i * 3] = THREE.MathUtils.randFloatSpread(12);
-      positions[i * 3 + 1] = THREE.MathUtils.randFloat(-7, 8);
-      positions[i * 3 + 2] = THREE.MathUtils.randFloatSpread(16);
-      alphas[i] = THREE.MathUtils.randFloat(0.25, 1);
-    }
-
-    const particles = new THREE.BufferGeometry();
-    particles.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-    particles.setAttribute("alpha", new THREE.BufferAttribute(alphas, 1));
-
-    const particleMaterial = new THREE.ShaderMaterial({
-      transparent: true,
-      depthWrite: false,
-      blending: THREE.AdditiveBlending,
-      uniforms: {
-        uSize: { value: prefersReducedMotion ? 2.2 : 3.4 },
-      },
-      vertexShader: `
-        attribute float alpha;
-        varying float vAlpha;
-        uniform float uSize;
-        void main() {
-          vAlpha = alpha;
-          vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-          gl_PointSize = uSize * (12.0 / -mvPosition.z);
-          gl_Position = projectionMatrix * mvPosition;
-        }
-      `,
-      fragmentShader: `
-        varying float vAlpha;
-        void main() {
-          vec2 uv = gl_PointCoord - vec2(0.5);
-          float strength = smoothstep(0.25, 0.0, length(uv));
-          vec3 color = mix(vec3(0.12, 0.95, 0.45), vec3(0.85, 1.0, 0.9), strength);
-          gl_FragColor = vec4(color, strength * vAlpha);
-        }
-      `,
+    const promptRenderer = new THREE.WebGLRenderer({
+      canvas: promptSceneCanvas,
+      alpha: true,
+      antialias: true,
+      powerPreference: "high-performance",
     });
+    promptRenderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
 
-    const pointCloud = new THREE.Points(particles, particleMaterial);
-    scene.add(pointCloud);
+    const promptScene = new THREE.Scene();
+    promptScene.fog = new THREE.FogExp2(0x041108, 0.09);
+
+    const promptCamera = new THREE.PerspectiveCamera(42, 1, 0.1, 60);
+    promptCamera.position.set(0, 0, 7.8);
+    promptScene.add(new THREE.AmbientLight(0xaaffcc, 0.8));
+    const keyLight = new THREE.PointLight(0x8cffb8, 1.4, 18, 2);
+    keyLight.position.set(2.5, 2.8, 4);
+    promptScene.add(keyLight);
+
+    const promptGroup = new THREE.Group();
+    promptScene.add(promptGroup);
+
+    const planeGeometry = new THREE.PlaneGeometry(3.1, 1.82, 1, 1);
+    const panelMeshes = [];
+    const raycaster = new THREE.Raycaster();
+    const pointer = new THREE.Vector2(2, 2);
+    const targetRotation = { x: -0.18, y: 0.12 };
+    let orbitOffset = 0;
+    let activeItemId = null;
+    let viewportBounds = promptSceneCanvas.getBoundingClientRect();
+
+    const starGeometry = new THREE.BufferGeometry();
+    const starCount = 240;
+    const starPositions = new Float32Array(starCount * 3);
+    for (let index = 0; index < starCount; index += 1) {
+      starPositions[index * 3] = THREE.MathUtils.randFloatSpread(16);
+      starPositions[index * 3 + 1] = THREE.MathUtils.randFloatSpread(10);
+      starPositions[index * 3 + 2] = THREE.MathUtils.randFloat(-8, -1.5);
+    }
+    starGeometry.setAttribute("position", new THREE.BufferAttribute(starPositions, 3));
+    const starMaterial = new THREE.PointsMaterial({
+      color: 0x86ffbb,
+      size: 0.045,
+      transparent: true,
+      opacity: 0.8,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    });
+    const stars = new THREE.Points(starGeometry, starMaterial);
+    promptScene.add(stars);
+
+    const selectionRing = new THREE.Mesh(
+      new THREE.TorusGeometry(2.08, 0.025, 12, 80),
+      new THREE.MeshBasicMaterial({
+        color: 0x85ffb6,
+        transparent: true,
+        opacity: 0.35,
+      })
+    );
+    selectionRing.rotation.x = Math.PI / 2;
+    selectionRing.position.z = -2.2;
+    promptScene.add(selectionRing);
 
     function resize() {
-      renderer.setSize(window.innerWidth, window.innerHeight, false);
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateProjectionMatrix();
+      ambientRenderer.setSize(window.innerWidth, window.innerHeight, false);
+      ambientCamera.aspect = window.innerWidth / window.innerHeight;
+      ambientCamera.updateProjectionMatrix();
+
+      viewportBounds = promptSceneCanvas.getBoundingClientRect();
+      const width = Math.max(viewportBounds.width, 1);
+      const height = Math.max(viewportBounds.height, 1);
+      promptRenderer.setSize(width, height, false);
+      promptCamera.aspect = width / height;
+      promptCamera.updateProjectionMatrix();
     }
 
-    resize();
-    window.addEventListener("resize", resize);
+    refreshThreeLayout = resize;
 
-    const mouse = { x: 0, y: 0 };
-    window.addEventListener("pointermove", (event) => {
-      mouse.x = event.clientX / window.innerWidth - 0.5;
-      mouse.y = event.clientY / window.innerHeight - 0.5;
-    });
+    function disposeMesh(mesh) {
+      if (mesh.material.map) {
+        mesh.material.map.dispose();
+      }
+      mesh.material.dispose();
+      promptGroup.remove(mesh);
+    }
 
-    function animate() {
-      if (!threeState || sceneMode !== "3d") {
-        requestAnimationFrame(animate);
-        return;
+    function syncPanels(records, nextActiveId) {
+      while (panelMeshes.length) {
+        disposeMesh(panelMeshes.pop());
       }
 
-      for (const bar of bars) {
+      activeItemId = nextActiveId;
+      const count = records.length || 1;
+      const spacingY = window.innerWidth < 720 ? 1.9 : 1.4;
+      const depthWave = window.innerWidth < 720 ? 0.35 : 0.7;
+
+      records.forEach((record, index) => {
+        const texture = makePanelTexture(THREE, record, record.id === activeItemId);
+        const material = new THREE.MeshBasicMaterial({
+          map: texture,
+          transparent: true,
+          opacity: 0.98,
+        });
+        const mesh = new THREE.Mesh(planeGeometry, material);
+        mesh.userData.id = record.id;
+        mesh.userData.baseY = (index - (count - 1) / 2) * -spacingY;
+        mesh.userData.baseZ = Math.sin(index * 0.55) * depthWave;
+        mesh.userData.baseX = Math.cos(index * 0.35) * 0.45;
+        mesh.userData.order = index;
+        promptGroup.add(mesh);
+        panelMeshes.push(mesh);
+      });
+    }
+
+    function updatePanelTransforms(force) {
+      panelMeshes.forEach((mesh) => {
+        const focus = mesh.userData.id === activeItemId ? 1 : 0;
+        const y = mesh.userData.baseY + orbitOffset * 1.12;
+        mesh.position.x = mesh.userData.baseX + focus * 0.22;
+        mesh.position.y = y;
+        mesh.position.z = mesh.userData.baseZ + focus * 0.8;
+        mesh.rotation.y = THREE.MathUtils.degToRad(mesh.position.y * -2.8 + (focus ? 3 : 0));
+        mesh.rotation.x = THREE.MathUtils.degToRad(mesh.position.y * -1.6);
+        const scale = focus ? 1.08 : 0.93;
+        mesh.scale.setScalar(scale);
+        if (force) {
+          mesh.material.opacity = focus ? 1 : 0.82;
+        }
+      });
+    }
+
+    function selectByOffset(direction) {
+      if (!panelMeshes.length) return;
+      const currentIndex = Math.max(
+        panelMeshes.findIndex((mesh) => mesh.userData.id === activeItemId),
+        0
+      );
+      const nextIndex = THREE.MathUtils.clamp(currentIndex + direction, 0, panelMeshes.length - 1);
+      const nextMesh = panelMeshes[nextIndex];
+      if (!nextMesh || nextMesh.userData.id === activeItemId) return;
+      activeItemId = nextMesh.userData.id;
+      orbitOffset = -nextMesh.userData.baseY / 1.12;
+      window.dispatchEvent(new CustomEvent("prompt-record-selected", { detail: { id: activeItemId } }));
+    }
+
+    promptSceneCanvas.addEventListener("pointermove", (event) => {
+      viewportBounds = promptSceneCanvas.getBoundingClientRect();
+      pointer.x = ((event.clientX - viewportBounds.left) / viewportBounds.width) * 2 - 1;
+      pointer.y = -((event.clientY - viewportBounds.top) / viewportBounds.height) * 2 + 1;
+      targetRotation.y = pointer.x * 0.22;
+      targetRotation.x = pointer.y * 0.08 - 0.16;
+    });
+
+    promptSceneCanvas.addEventListener("pointerleave", () => {
+      pointer.x = 2;
+      pointer.y = 2;
+      targetRotation.x = -0.18;
+      targetRotation.y = 0.12;
+    });
+
+    promptSceneCanvas.addEventListener("click", () => {
+      raycaster.setFromCamera(pointer, promptCamera);
+      const hits = raycaster.intersectObjects(panelMeshes);
+      if (!hits.length) return;
+      const hit = hits[0].object;
+      activeItemId = hit.userData.id;
+      orbitOffset = -hit.userData.baseY / 1.12;
+      window.dispatchEvent(new CustomEvent("prompt-record-selected", { detail: { id: activeItemId } }));
+    });
+
+    promptSceneCanvas.addEventListener(
+      "wheel",
+      (event) => {
+        if (sceneMode !== "3d") return;
+        event.preventDefault();
+        selectByOffset(event.deltaY > 0 ? 1 : -1);
+      },
+      { passive: false }
+    );
+
+    window.addEventListener("keydown", (event) => {
+      if (sceneMode !== "3d") return;
+      if (event.key === "ArrowDown" || event.key === "PageDown") {
+        selectByOffset(1);
+      }
+      if (event.key === "ArrowUp" || event.key === "PageUp") {
+        selectByOffset(-1);
+      }
+    });
+
+    window.addEventListener("resize", resize);
+    window.addEventListener("prompt-records-update", (event) => {
+      const detail = event.detail || {};
+      syncPanels(detail.items || [], detail.activeItemId || null);
+      activeItemId = detail.activeItemId || null;
+      const activeMesh = panelMeshes.find((mesh) => mesh.userData.id === activeItemId);
+      orbitOffset = activeMesh ? -activeMesh.userData.baseY / 1.12 : 0;
+      updatePanelTransforms(true);
+    });
+
+    resize();
+    threeReady = true;
+
+    function animate() {
+      for (const bar of rainBars) {
         bar.mesh.position.y -= prefersReducedMotion ? 0.004 : bar.speed;
         bar.mesh.position.x += bar.drift;
         if (bar.mesh.position.y < -8) {
@@ -324,30 +564,34 @@
         }
       }
 
-      const particlePositions = particles.attributes.position.array;
-      for (let i = 0; i < particleCount; i += 1) {
-        particlePositions[i * 3 + 1] -= prefersReducedMotion ? 0.01 : 0.03;
-        if (particlePositions[i * 3 + 1] < -7) {
-          particlePositions[i * 3 + 1] = 8;
-          particlePositions[i * 3] = THREE.MathUtils.randFloatSpread(12);
-          particlePositions[i * 3 + 2] = THREE.MathUtils.randFloatSpread(16);
-        }
+      rainGroup.rotation.y *= 0.96;
+      rainGroup.rotation.y += targetRotation.y * 0.04;
+      ambientCamera.position.x += (targetRotation.y * 1.6 - ambientCamera.position.x) * 0.05;
+      ambientCamera.position.y += (-targetRotation.x * 1.6 + 0.7 - ambientCamera.position.y) * 0.05;
+      ambientCamera.lookAt(0, 0.2, 0);
+      ambientRenderer.render(ambientScene, ambientCamera);
+
+      if (sceneMode === "3d") {
+        promptGroup.rotation.x += (targetRotation.x - promptGroup.rotation.x) * 0.06;
+        promptGroup.rotation.y += (targetRotation.y - promptGroup.rotation.y) * 0.06;
+        stars.rotation.y += prefersReducedMotion ? 0.0005 : 0.0014;
+        selectionRing.rotation.z += prefersReducedMotion ? 0.0008 : 0.0022;
+
+        panelMeshes.forEach((mesh) => {
+          const focus = mesh.userData.id === activeItemId ? 1 : 0;
+          const targetOpacity = focus ? 1 : 0.78;
+          mesh.material.opacity += (targetOpacity - mesh.material.opacity) * 0.12;
+        });
+
+        updatePanelTransforms(false);
+        promptRenderer.render(promptScene, promptCamera);
+      } else {
+        promptRenderer.clear();
       }
-      particles.attributes.position.needsUpdate = true;
 
-      group.rotation.y = mouse.x * 0.35;
-      group.rotation.x = -mouse.y * 0.18;
-      pointCloud.rotation.y += prefersReducedMotion ? 0.0008 : 0.0018;
-      camera.position.x += (mouse.x * 1.3 - camera.position.x) * 0.04;
-      camera.position.y += (mouse.y * -0.8 + 0.8 - camera.position.y) * 0.04;
-      camera.lookAt(0, 0.2, 0);
-
-      renderer.render(scene, camera);
       requestAnimationFrame(animate);
     }
 
-    threeState = { renderer };
-    threeReady = true;
     requestAnimationFrame(animate);
     return true;
   }
@@ -364,5 +608,6 @@
   window.addEventListener("prompt-scene-mode-change", (event) => {
     sceneMode = event.detail && event.detail.mode === "3d" ? "3d" : "2d";
     updateVisibleMode();
+    requestAnimationFrame(refreshThreeLayout);
   });
 })();
