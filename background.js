@@ -306,25 +306,32 @@
 
     const THREE = window.THREE;
     const isMobile = window.matchMedia("(max-width: 720px)").matches;
-    const ambientRenderer = new THREE.WebGLRenderer({
+    const renderer = new THREE.WebGLRenderer({
       canvas: matrixThreeCanvas,
       alpha: true,
       antialias: true,
       powerPreference: "high-performance",
     });
-    ambientRenderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setClearColor(0x000000, 0);
+    if ("outputColorSpace" in renderer && THREE.SRGBColorSpace) {
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
+    }
 
-    const ambientScene = new THREE.Scene();
-    ambientScene.fog = new THREE.FogExp2(0x041108, 0.05);
-    const ambientCamera = new THREE.PerspectiveCamera(52, 1, 0.1, 90);
-    ambientCamera.position.set(0, 0.7, 8.5);
-    ambientScene.add(new THREE.AmbientLight(0x77ffaa, 0.7));
-    const ambientLight = new THREE.PointLight(0x55ff99, 1.4, 20, 2);
-    ambientLight.position.set(0, 4, 4);
-    ambientScene.add(ambientLight);
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x041108, 0.035);
+    const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 100);
+    camera.position.set(0, 0.15, isMobile ? 11.4 : 10.2);
+    scene.add(new THREE.AmbientLight(0xaaffcc, 0.9));
+    const keyLight = new THREE.PointLight(0x8cffb8, 1.75, 26, 2);
+    keyLight.position.set(3.2, 3.8, 7);
+    scene.add(keyLight);
+    const fillLight = new THREE.PointLight(0x37ff8c, 1.1, 20, 2);
+    fillLight.position.set(-3.5, -2, 5.5);
+    scene.add(fillLight);
 
     const rainGroup = new THREE.Group();
-    ambientScene.add(rainGroup);
+    scene.add(rainGroup);
 
     const barGeometry = new THREE.BoxGeometry(0.08, 1, 0.08);
     const rainBars = [];
@@ -349,33 +356,8 @@
       });
     }
 
-    const promptRenderer = new THREE.WebGLRenderer({
-      canvas: promptSceneCanvas,
-      alpha: true,
-      antialias: true,
-      powerPreference: "high-performance",
-    });
-    promptRenderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-    promptRenderer.setClearColor(0x000000, 0);
-    if ("outputColorSpace" in promptRenderer && THREE.SRGBColorSpace) {
-      promptRenderer.outputColorSpace = THREE.SRGBColorSpace;
-    }
-
-    const promptScene = new THREE.Scene();
-    promptScene.fog = new THREE.FogExp2(0x041108, 0.045);
-
-    const promptCamera = new THREE.PerspectiveCamera(40, 1, 0.1, 80);
-    promptCamera.position.set(0, 0.1, isMobile ? 11.4 : 10.2);
-    promptScene.add(new THREE.AmbientLight(0xaaffcc, 0.95));
-    const keyLight = new THREE.PointLight(0x8cffb8, 1.8, 26, 2);
-    keyLight.position.set(3.2, 3.8, 7);
-    promptScene.add(keyLight);
-    const fillLight = new THREE.PointLight(0x37ff8c, 1.1, 20, 2);
-    fillLight.position.set(-3.5, -2, 5.5);
-    promptScene.add(fillLight);
-
     const promptGroup = new THREE.Group();
-    promptScene.add(promptGroup);
+    scene.add(promptGroup);
 
     const planeGeometry = new THREE.PlaneGeometry(isMobile ? 2.45 : 2.9, isMobile ? 1.44 : 1.72, 1, 1);
     const panelMeshes = [];
@@ -384,7 +366,7 @@
     const pointer = new THREE.Vector2(2, 2);
     const targetRotation = { x: -0.04, y: 0.08 };
     let activeItemId = null;
-    let viewportBounds = promptSceneCanvas.getBoundingClientRect();
+    let viewportBounds = matrixThreeCanvas.getBoundingClientRect();
     const sceneFocus = new THREE.Vector3(0, 0, 0);
 
     const starGeometry = new THREE.BufferGeometry();
@@ -405,7 +387,7 @@
       depthWrite: false,
     });
     const stars = new THREE.Points(starGeometry, starMaterial);
-    promptScene.add(stars);
+    scene.add(stars);
 
     const linkGeometry = new THREE.BufferGeometry();
     const linkMaterial = new THREE.LineBasicMaterial({
@@ -415,7 +397,7 @@
       blending: THREE.AdditiveBlending,
     });
     const linkMesh = new THREE.LineSegments(linkGeometry, linkMaterial);
-    promptScene.add(linkMesh);
+    scene.add(linkMesh);
 
     const selectionRing = new THREE.Mesh(
       new THREE.TorusGeometry(2.28, 0.03, 16, 112),
@@ -427,19 +409,13 @@
     );
     selectionRing.rotation.x = Math.PI / 2.1;
     selectionRing.position.z = 0;
-    promptScene.add(selectionRing);
+    scene.add(selectionRing);
 
     function resize() {
-      ambientRenderer.setSize(window.innerWidth, window.innerHeight, false);
-      ambientCamera.aspect = window.innerWidth / window.innerHeight;
-      ambientCamera.updateProjectionMatrix();
-
-      viewportBounds = promptSceneCanvas.getBoundingClientRect();
-      const width = Math.max(viewportBounds.width, 1);
-      const height = Math.max(viewportBounds.height, 1);
-      promptRenderer.setSize(width, height, false);
-      promptCamera.aspect = width / height;
-      promptCamera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight, false);
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      viewportBounds = matrixThreeCanvas.getBoundingClientRect();
     }
 
     refreshThreeLayout = resize;
@@ -603,23 +579,23 @@
       window.dispatchEvent(new CustomEvent("prompt-record-selected", { detail: { id: activeItemId } }));
     }
 
-    promptSceneCanvas.addEventListener("pointermove", (event) => {
-      viewportBounds = promptSceneCanvas.getBoundingClientRect();
+    matrixThreeCanvas.addEventListener("pointermove", (event) => {
+      viewportBounds = matrixThreeCanvas.getBoundingClientRect();
       pointer.x = ((event.clientX - viewportBounds.left) / viewportBounds.width) * 2 - 1;
       pointer.y = -((event.clientY - viewportBounds.top) / viewportBounds.height) * 2 + 1;
       targetRotation.y = pointer.x * 0.22;
       targetRotation.x = pointer.y * 0.08 - 0.16;
     });
 
-    promptSceneCanvas.addEventListener("pointerleave", () => {
+    matrixThreeCanvas.addEventListener("pointerleave", () => {
       pointer.x = 2;
       pointer.y = 2;
       targetRotation.x = -0.18;
       targetRotation.y = 0.12;
     });
 
-    promptSceneCanvas.addEventListener("click", () => {
-      raycaster.setFromCamera(pointer, promptCamera);
+    matrixThreeCanvas.addEventListener("click", () => {
+      raycaster.setFromCamera(pointer, camera);
       const hits = raycaster.intersectObjects(panelMeshes);
       if (!hits.length) return;
       const hit = hits[0].object;
@@ -627,7 +603,7 @@
       window.dispatchEvent(new CustomEvent("prompt-record-selected", { detail: { id: activeItemId } }));
     });
 
-    promptSceneCanvas.addEventListener(
+    matrixThreeCanvas.addEventListener(
       "wheel",
       (event) => {
         if (sceneMode !== "3d") return;
@@ -672,14 +648,9 @@
         }
       }
 
-      rainGroup.rotation.y *= 0.96;
-      rainGroup.rotation.y += targetRotation.y * 0.04;
-      ambientCamera.position.x += (targetRotation.y * 1.6 - ambientCamera.position.x) * 0.05;
-      ambientCamera.position.y += (-targetRotation.x * 1.6 + 0.7 - ambientCamera.position.y) * 0.05;
-      ambientCamera.lookAt(0, 0.2, 0);
-      ambientRenderer.render(ambientScene, ambientCamera);
-
       if (sceneMode === "3d") {
+        rainGroup.rotation.y *= 0.96;
+        rainGroup.rotation.y += targetRotation.y * 0.04;
         promptGroup.rotation.x += (targetRotation.x - promptGroup.rotation.x) * 0.04;
         promptGroup.rotation.y += (targetRotation.y - promptGroup.rotation.y) * 0.04;
         stars.rotation.y += prefersReducedMotion ? 0.0005 : 0.0014;
@@ -699,13 +670,13 @@
         sceneFocus.lerp(activePosition, 0.08);
         selectionRing.position.lerp(activePosition, 0.12);
         selectionRing.scale.setScalar(activeMesh && activeMesh.userData.id === activeItemId ? 1 : 0.92);
-        promptCamera.position.x += ((targetRotation.y * 0.9) - promptCamera.position.x) * 0.06;
-        promptCamera.position.y += ((0.1 + targetRotation.x * -0.7) - promptCamera.position.y) * 0.06;
-        promptCamera.position.z += (((isMobile ? 11.4 : 10.2) - Math.max(activePosition.z, 0) * 0.15) - promptCamera.position.z) * 0.06;
-        promptCamera.lookAt(sceneFocus.x * 0.28, sceneFocus.y * 0.24, sceneFocus.z * 0.18);
-        promptRenderer.render(promptScene, promptCamera);
+        camera.position.x += ((targetRotation.y * 0.9) - camera.position.x) * 0.06;
+        camera.position.y += ((0.15 + targetRotation.x * -0.7) - camera.position.y) * 0.06;
+        camera.position.z += (((isMobile ? 11.4 : 10.2) - Math.max(activePosition.z, 0) * 0.15) - camera.position.z) * 0.06;
+        camera.lookAt(sceneFocus.x * 0.28, sceneFocus.y * 0.24, sceneFocus.z * 0.18);
+        renderer.render(scene, camera);
       } else {
-        promptRenderer.clear();
+        renderer.clear();
       }
 
       requestAnimationFrame(animate);
