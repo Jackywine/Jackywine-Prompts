@@ -432,9 +432,8 @@ h2 {
     0 22px 54px rgba(0, 0, 0, 0.36),
     0 0 18px rgba(92, 255, 150, 0.12);
   backdrop-filter: blur(12px);
-  animation: sceneDrift 8s ease-in-out infinite;
-  animation-delay: var(--node-delay);
   cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .scene-node strong,
@@ -467,16 +466,6 @@ h2 {
   box-shadow:
     0 28px 70px rgba(0, 0, 0, 0.42),
     0 0 24px rgba(92, 255, 150, 0.26);
-}
-
-@keyframes sceneDrift {
-  0%,
-  100% {
-    margin-top: 0;
-  }
-  50% {
-    margin-top: -10px;
-  }
 }
 
 .scene-legend {
