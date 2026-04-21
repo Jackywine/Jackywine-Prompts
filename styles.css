@@ -14,6 +14,7 @@
   --shadow: 0 24px 80px rgba(0, 0, 0, 0.42);
   --radius: 8px;
   --max-width: 1680px;
+  --hero-title-shadow: 0 0 18px rgba(92, 255, 150, 0.28);
 }
 
 * {
@@ -62,6 +63,40 @@ input {
   background-image: linear-gradient(transparent 0%, rgba(92, 255, 150, 0.12) 50%, transparent 100%);
   background-size: 100% 5px;
   mix-blend-mode: screen;
+}
+
+body.theme-kami {
+  --bg: #f4efe4;
+  --panel: rgba(255, 250, 241, 0.82);
+  --panel-strong: rgba(250, 244, 232, 0.94);
+  --panel-soft: rgba(241, 235, 223, 0.76);
+  --border: rgba(61, 86, 120, 0.14);
+  --border-strong: rgba(61, 86, 120, 0.32);
+  --text: #243141;
+  --muted: #6a7a8d;
+  --accent: #426c99;
+  --accent-strong: #315173;
+  --accent-soft: rgba(66, 108, 153, 0.1);
+  --shadow: 0 24px 72px rgba(98, 78, 44, 0.12);
+  --hero-title-shadow: none;
+  color-scheme: light;
+}
+
+body.theme-kami {
+  background:
+    radial-gradient(circle at top, rgba(122, 147, 177, 0.18), transparent 34%),
+    linear-gradient(180deg, rgba(255, 251, 243, 0.98), rgba(244, 239, 228, 0.98));
+}
+
+.theme-kami .fx-layer {
+  filter: sepia(0.28) hue-rotate(145deg) saturate(0.38) brightness(1.06);
+  opacity: 0.18;
+}
+
+.theme-kami .noise-layer {
+  opacity: 0.05;
+  mix-blend-mode: multiply;
+  background-image: linear-gradient(transparent 0%, rgba(66, 108, 153, 0.06) 50%, transparent 100%);
 }
 
 .app-shell {
@@ -154,7 +189,7 @@ h1 {
   margin-bottom: 12px;
   font-size: clamp(2rem, 3vw, 3.4rem);
   line-height: 1;
-  text-shadow: 0 0 18px rgba(92, 255, 150, 0.28);
+  text-shadow: var(--hero-title-shadow);
 }
 
 h2 {
@@ -479,6 +514,94 @@ h2 {
   filter: brightness(1.04);
 }
 
+.theme-kami .hero-copy,
+.theme-kami .summary-item p,
+.theme-kami .prompt-card p,
+.theme-kami .detail-summary,
+.theme-kami .markdown-body p,
+.theme-kami .markdown-body li,
+.theme-kami .markdown-body blockquote {
+  color: #435468;
+}
+
+.theme-kami .hero-block {
+  background: linear-gradient(180deg, rgba(255, 251, 245, 0.96), rgba(245, 238, 226, 0.88));
+}
+
+.theme-kami .metric-box,
+.theme-kami .summary-item,
+.theme-kami .toolbar,
+.theme-kami .mode-toggle,
+.theme-kami #searchInput,
+.theme-kami .prompt-card,
+.theme-kami .scene-node,
+.theme-kami .detail-drawer,
+.theme-kami .scene-legend {
+  background-color: rgba(255, 251, 244, 0.84);
+}
+
+.theme-kami #searchInput {
+  box-shadow: inset 0 0 0 1px rgba(66, 108, 153, 0.08);
+}
+
+.theme-kami .filter-chip,
+.theme-kami .tag-chip {
+  background: rgba(255, 249, 241, 0.9);
+}
+
+.theme-kami .card-ghost {
+  color: rgba(49, 81, 115, 0.18);
+}
+
+.theme-kami .scene-link {
+  stroke: rgba(66, 108, 153, 0.36);
+  filter: drop-shadow(0 0 4px rgba(66, 108, 153, 0.22));
+}
+
+.theme-kami .scene-node,
+.theme-kami .prompt-card {
+  background: linear-gradient(180deg, rgba(255, 252, 246, 0.95), rgba(244, 238, 229, 0.92));
+}
+
+.theme-kami .scene-node strong,
+.theme-kami .scene-node span:last-child,
+.theme-kami .card-headline h3,
+.theme-kami .metric-box strong,
+.theme-kami .toolbar strong,
+.theme-kami .summary-item h3,
+.theme-kami .markdown-body h1,
+.theme-kami .markdown-body h2,
+.theme-kami .markdown-body h3,
+.theme-kami .markdown-body h4 {
+  color: #315173;
+}
+
+.theme-kami .scene-node-kicker,
+.theme-kami .eyebrow,
+.theme-kami .panel-kicker,
+.theme-kami .status-label,
+.theme-kami .detail-category,
+.theme-kami .field-label,
+.theme-kami .metric-label,
+.theme-kami .card-meta,
+.theme-kami .empty-state,
+.theme-kami .detail-empty {
+  color: #76879a;
+}
+
+.theme-kami .status-dot,
+.theme-kami .legend-dot {
+  background: #426c99;
+  box-shadow: 0 0 10px rgba(66, 108, 153, 0.32);
+}
+
+.theme-kami .scene-shell,
+.theme-kami .wall-shell {
+  background:
+    radial-gradient(circle at top left, rgba(95, 125, 162, 0.06), transparent 34%),
+    linear-gradient(180deg, rgba(252, 247, 238, 0.95), rgba(245, 238, 227, 0.92));
+}
+
 .scene-legend {
   position: absolute;
   left: 16px;
@@ -767,6 +890,10 @@ h2 {
   background: rgba(3, 12, 7, 0.82);
   border-color: rgba(92, 255, 150, 0.18);
   backdrop-filter: blur(16px);
+}
+
+.theme-kami.scene-3d .toolbar {
+  background: rgba(252, 247, 238, 0.86);
 }
 
 .scene-3d .scene-shell {
