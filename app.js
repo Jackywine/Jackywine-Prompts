@@ -64,6 +64,12 @@
   let activeItemId = null;
   let query = "";
   let sceneMode = localStorage.getItem(STORAGE_KEY) === "3d" ? "3d" : "2d";
+  let sceneFallbackAnimationId = 0;
+  let sceneFallbackState = {
+    nodes: [],
+    edges: [],
+    startedAt: 0,
+  };
 
   function getCategoryMeta(categoryId) {
     const raw = categories.find((category) => category.id === categoryId) || { id: categoryId };
@@ -360,25 +366,21 @@
     if (!sceneItems.length) {
       sceneDomFallback.innerHTML = "";
       sceneConnections.innerHTML = "";
+      sceneFallbackState = { nodes: [], edges: [], startedAt: 0 };
       return;
     }
 
     const nodes = sceneItems.slice(0, 12).map((item, index) => {
       const angle = index * 2.399963229728653;
-      const radius = 18 + (index % 5) * 6;
-      const x = 50 + Math.cos(angle) * radius;
-      const y = 50 + Math.sin(angle) * (radius * 0.62);
-      const z = ((index % 4) - 1.5) * 80;
-      const rotateY = Math.cos(angle) * 14;
-      const rotateX = Math.sin(angle * 1.2) * -10;
       return {
         item,
-        x,
-        y,
-        z,
-        rotateY,
-        rotateX,
-        scale: item.id === activeItemId ? 1.08 : 0.92,
+        angleOffset: angle,
+        radiusX: 14 + (index % 4) * 5 + Math.floor(index / 4) * 2.2,
+        radiusY: 10 + (index % 3) * 4 + Math.floor(index / 4) * 1.5,
+        orbitSpeed: 0.08 + (index % 5) * 0.018,
+        depthAmp: 70 + (index % 4) * 26,
+        bobAmp: 1.2 + (index % 3) * 0.45,
+        tiltBias: ((index % 5) - 2) * 2.8,
       };
     });
 
@@ -390,12 +392,12 @@
             class="scene-node ${node.item.id === activeItemId ? "is-active" : ""}"
             data-scene-id="${node.item.id}"
             style="
-              left:${node.x}%;
-              top:${node.y}%;
-              --node-z:${node.z}px;
-              --node-rx:${node.rotateX}deg;
-              --node-ry:${node.rotateY}deg;
-              --node-scale:${node.scale};
+              left:50%;
+              top:50%;
+              --node-z:0px;
+              --node-rx:0deg;
+              --node-ry:0deg;
+              --node-scale:${node.item.id === activeItemId ? 1.08 : 0.92};
               --node-delay:${index * 0.18}s;
             "
           >
@@ -418,25 +420,85 @@
     sceneConnections.setAttribute("viewBox", "0 0 100 100");
     sceneConnections.innerHTML = edges
       .map(
-        ([from, to]) => `
+        ([,], index) => `
           <line
-            x1="${from.x}"
-            y1="${from.y}"
-            x2="${to.x}"
-            y2="${to.y}"
             class="scene-link"
+            data-edge-index="${index}"
           />
         `
       )
       .join("");
 
-    [...sceneDomFallback.querySelectorAll("[data-scene-id]")].forEach((button) => {
+    const buttonElements = [...sceneDomFallback.querySelectorAll("[data-scene-id]")];
+    buttonElements.forEach((button, index) => {
       button.addEventListener("click", () => {
         activeItemId = button.dataset.sceneId;
         render();
         openDrawer();
       });
+      nodes[index].element = button;
     });
+
+    sceneFallbackState = {
+      nodes,
+      edges,
+      startedAt: sceneFallbackState.startedAt || performance.now(),
+    };
+
+    if (!sceneFallbackAnimationId) {
+      sceneFallbackAnimationId = window.requestAnimationFrame(animateSceneFallback);
+    }
+  }
+
+  function animateSceneFallback(now) {
+    sceneFallbackAnimationId = 0;
+
+    if (!sceneDomFallback || !sceneConnections || !sceneFallbackState.nodes.length) {
+      return;
+    }
+
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const elapsed = (now - sceneFallbackState.startedAt) * 0.001;
+    const centerX = 50;
+    const centerY = 50;
+    const positions = sceneFallbackState.nodes.map((node) => {
+      const itemIsActive = node.item.id === activeItemId;
+      const theta = node.angleOffset + elapsed * (reduced ? 0.015 : node.orbitSpeed);
+      const x = centerX + Math.cos(theta) * node.radiusX;
+      const y =
+        centerY +
+        Math.sin(theta * 0.88 + node.angleOffset * 0.35) * node.radiusY +
+        Math.sin(theta * 1.7) * node.bobAmp;
+      const z = Math.sin(theta * 1.15) * node.depthAmp + (itemIsActive ? 42 : 0);
+      const rotateY = Math.cos(theta + Math.PI / 8) * 16 + node.tiltBias;
+      const rotateX = Math.sin(theta * 1.2) * -10;
+      const scale = itemIsActive ? 1.08 : 0.9 + ((z + node.depthAmp) / (node.depthAmp * 2)) * 0.08;
+
+      node.element.classList.toggle("is-active", itemIsActive);
+      node.element.style.left = `${x}%`;
+      node.element.style.top = `${y}%`;
+      node.element.style.setProperty("--node-z", `${z}px`);
+      node.element.style.setProperty("--node-rx", `${rotateX}deg`);
+      node.element.style.setProperty("--node-ry", `${rotateY}deg`);
+      node.element.style.setProperty("--node-scale", String(scale));
+      node.element.style.zIndex = String(1000 + Math.round(z));
+
+      return { x, y };
+    });
+
+    const lineElements = [...sceneConnections.querySelectorAll("[data-edge-index]")];
+    sceneFallbackState.edges.forEach((edge, index) => {
+      const line = lineElements[index];
+      if (!line) return;
+      const from = positions[edge[0]];
+      const to = positions[edge[1]];
+      line.setAttribute("x1", String(from.x));
+      line.setAttribute("y1", String(from.y));
+      line.setAttribute("x2", String(to.x));
+      line.setAttribute("y2", String(to.y));
+    });
+
+    sceneFallbackAnimationId = window.requestAnimationFrame(animateSceneFallback);
   }
 
   function render() {
