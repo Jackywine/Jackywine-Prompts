@@ -70,13 +70,13 @@ body.theme-kami {
   --panel: rgba(255, 250, 241, 0.82);
   --panel-strong: rgba(250, 244, 232, 0.94);
   --panel-soft: rgba(241, 235, 223, 0.76);
-  --border: rgba(61, 86, 120, 0.14);
-  --border-strong: rgba(61, 86, 120, 0.32);
-  --text: #243141;
-  --muted: #6a7a8d;
-  --accent: #426c99;
-  --accent-strong: #315173;
-  --accent-soft: rgba(66, 108, 153, 0.1);
+  --border: rgba(54, 72, 98, 0.22);
+  --border-strong: rgba(49, 70, 101, 0.46);
+  --text: #1f2937;
+  --muted: #556476;
+  --accent: #355c87;
+  --accent-strong: #234261;
+  --accent-soft: rgba(53, 92, 135, 0.12);
   --shadow: 0 24px 72px rgba(98, 78, 44, 0.12);
   --hero-title-shadow: none;
   color-scheme: light;
@@ -90,11 +90,11 @@ body.theme-kami {
 
 .theme-kami .fx-layer {
   filter: sepia(0.28) hue-rotate(145deg) saturate(0.38) brightness(1.06);
-  opacity: 0.18;
+  opacity: 0.08;
 }
 
 .theme-kami .noise-layer {
-  opacity: 0.05;
+  opacity: 0.025;
   mix-blend-mode: multiply;
   background-image: linear-gradient(transparent 0%, rgba(66, 108, 153, 0.06) 50%, transparent 100%);
 }
@@ -542,11 +542,14 @@ h2 {
 
 .theme-kami #searchInput {
   box-shadow: inset 0 0 0 1px rgba(66, 108, 153, 0.08);
+  color: #1f2937;
 }
 
 .theme-kami .filter-chip,
 .theme-kami .tag-chip {
   background: rgba(255, 249, 241, 0.9);
+  color: #35506f;
+  border-color: rgba(49, 70, 101, 0.18);
 }
 
 .theme-kami .card-ghost {
@@ -573,7 +576,7 @@ h2 {
 .theme-kami .markdown-body h2,
 .theme-kami .markdown-body h3,
 .theme-kami .markdown-body h4 {
-  color: #315173;
+  color: #234261;
 }
 
 .theme-kami .scene-node-kicker,
@@ -586,7 +589,7 @@ h2 {
 .theme-kami .card-meta,
 .theme-kami .empty-state,
 .theme-kami .detail-empty {
-  color: #76879a;
+  color: #5c6e81;
 }
 
 .theme-kami .status-dot,
@@ -600,6 +603,50 @@ h2 {
   background:
     radial-gradient(circle at top left, rgba(95, 125, 162, 0.06), transparent 34%),
     linear-gradient(180deg, rgba(252, 247, 238, 0.95), rgba(245, 238, 227, 0.92));
+}
+
+.theme-kami #searchInput::placeholder {
+  color: #6a7c8f;
+}
+
+.theme-kami .filter-chip.is-active,
+.theme-kami .mode-button.is-active {
+  color: #1f3652;
+  border-color: rgba(49, 70, 101, 0.42);
+  background: rgba(53, 92, 135, 0.1);
+}
+
+.theme-kami .mode-button,
+.theme-kami .drawer-dismiss,
+.theme-kami .drawer-close,
+.theme-kami .copy-button {
+  color: #35506f;
+}
+
+.theme-kami .mode-button:hover,
+.theme-kami .drawer-dismiss:hover,
+.theme-kami .drawer-close:hover,
+.theme-kami .copy-button:hover {
+  border-color: rgba(49, 70, 101, 0.38);
+}
+
+.theme-kami .summary-item p:last-child,
+.theme-kami .toolbar-note,
+.theme-kami .scene-shell-meta,
+.theme-kami .scene-node span:last-child,
+.theme-kami .markdown-body a,
+.theme-kami .markdown-body blockquote,
+.theme-kami .markdown-body :not(pre) > code {
+  color: #4f6276;
+}
+
+.theme-kami .card-meta,
+.theme-kami .tag-chip,
+.theme-kami .scene-node-kicker,
+.theme-kami .metric-label,
+.theme-kami .panel-kicker,
+.theme-kami .status-label {
+  color: #52667c;
 }
 
 .scene-legend {
