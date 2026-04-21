@@ -69,6 +69,7 @@
     nodes: [],
     edges: [],
     startedAt: 0,
+    pointer: { x: 0.5, y: 0.5, active: false },
   };
 
   function getCategoryMeta(categoryId) {
@@ -366,21 +367,28 @@
     if (!sceneItems.length) {
       sceneDomFallback.innerHTML = "";
       sceneConnections.innerHTML = "";
-      sceneFallbackState = { nodes: [], edges: [], startedAt: 0 };
+      sceneFallbackState = {
+        nodes: [],
+        edges: [],
+        startedAt: 0,
+        pointer: sceneFallbackState.pointer,
+      };
       return;
     }
 
     const nodes = sceneItems.slice(0, 12).map((item, index) => {
       const angle = index * 2.399963229728653;
+      const band = Math.floor(index / 4);
       return {
         item,
         angleOffset: angle,
-        radiusX: 14 + (index % 4) * 5 + Math.floor(index / 4) * 2.2,
-        radiusY: 10 + (index % 3) * 4 + Math.floor(index / 4) * 1.5,
-        orbitSpeed: 0.08 + (index % 5) * 0.018,
-        depthAmp: 70 + (index % 4) * 26,
-        bobAmp: 1.2 + (index % 3) * 0.45,
+        orbitRadius: 18 + (index % 4) * 4.2 + band * 2.4,
+        orbitTilt: -16 + band * 12,
+        orbitSpeed: 0.11 + (index % 5) * 0.019,
+        depthAmp: 82 + (index % 4) * 22,
+        bobAmp: 1.4 + (index % 3) * 0.4,
         tiltBias: ((index % 5) - 2) * 2.8,
+        phaseJitter: (index % 7) * 0.23,
       };
     });
 
@@ -443,7 +451,21 @@
       nodes,
       edges,
       startedAt: sceneFallbackState.startedAt || performance.now(),
+      pointer: sceneFallbackState.pointer,
     };
+
+    if (!sceneDomFallback.dataset.boundPointer) {
+      sceneDomFallback.addEventListener("pointermove", (event) => {
+        const bounds = sceneDomFallback.getBoundingClientRect();
+        sceneFallbackState.pointer.x = (event.clientX - bounds.left) / bounds.width;
+        sceneFallbackState.pointer.y = (event.clientY - bounds.top) / bounds.height;
+        sceneFallbackState.pointer.active = true;
+      });
+      sceneDomFallback.addEventListener("pointerleave", () => {
+        sceneFallbackState.pointer.active = false;
+      });
+      sceneDomFallback.dataset.boundPointer = "true";
+    }
 
     if (!sceneFallbackAnimationId) {
       sceneFallbackAnimationId = window.requestAnimationFrame(animateSceneFallback);
@@ -461,17 +483,30 @@
     const elapsed = (now - sceneFallbackState.startedAt) * 0.001;
     const centerX = 50;
     const centerY = 50;
+    const pointerOffsetX = (sceneFallbackState.pointer.x - 0.5) * 18;
+    const pointerOffsetY = (sceneFallbackState.pointer.y - 0.5) * 14;
+    const pointerWeight = sceneFallbackState.pointer.active ? 1 : 0;
     const positions = sceneFallbackState.nodes.map((node) => {
       const itemIsActive = node.item.id === activeItemId;
       const theta = node.angleOffset + elapsed * (reduced ? 0.015 : node.orbitSpeed);
-      const x = centerX + Math.cos(theta) * node.radiusX;
+      const phi = node.angleOffset * 0.6 + elapsed * (reduced ? 0.012 : node.orbitSpeed * 0.72);
+      const orbitX = Math.cos(theta) * Math.cos(phi) * node.orbitRadius;
+      const orbitY =
+        Math.sin(phi) * (node.orbitRadius * 0.56) +
+        Math.sin(theta * 1.6 + node.phaseJitter) * node.bobAmp;
+      const orbitZ = Math.sin(theta) * Math.cos(phi) * node.depthAmp;
+      const disturbedX = orbitX + pointerOffsetX * pointerWeight * (orbitZ / (node.depthAmp + 1)) * 0.35;
+      const disturbedY =
+        orbitY +
+        pointerOffsetY * pointerWeight * (orbitZ / (node.depthAmp + 1)) * 0.26 +
+        Math.sin(theta * 1.7) * node.bobAmp;
+      const x = centerX + disturbedX;
       const y =
         centerY +
-        Math.sin(theta * 0.88 + node.angleOffset * 0.35) * node.radiusY +
-        Math.sin(theta * 1.7) * node.bobAmp;
-      const z = Math.sin(theta * 1.15) * node.depthAmp + (itemIsActive ? 42 : 0);
-      const rotateY = Math.cos(theta + Math.PI / 8) * 16 + node.tiltBias;
-      const rotateX = Math.sin(theta * 1.2) * -10;
+        disturbedY;
+      const z = orbitZ + (itemIsActive ? 42 : 0);
+      const rotateY = Math.cos(theta + Math.PI / 8) * 18 + node.tiltBias + pointerOffsetX * pointerWeight * 0.22;
+      const rotateX = Math.sin(phi + theta * 0.42) * -12 + pointerOffsetY * pointerWeight * -0.16;
       const scale = itemIsActive ? 1.08 : 0.9 + ((z + node.depthAmp) / (node.depthAmp * 2)) * 0.08;
 
       node.element.classList.toggle("is-active", itemIsActive);
