@@ -410,6 +410,7 @@ h2 {
   z-index: 2;
   perspective: 1400px;
   transform-style: preserve-3d;
+  will-change: transform;
 }
 
 .scene-node {
@@ -433,7 +434,8 @@ h2 {
     0 0 18px rgba(92, 255, 150, 0.12);
   backdrop-filter: blur(12px);
   cursor: pointer;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+  will-change: transform;
 }
 
 .scene-node strong,
@@ -466,6 +468,15 @@ h2 {
   box-shadow:
     0 28px 70px rgba(0, 0, 0, 0.42),
     0 0 24px rgba(92, 255, 150, 0.26);
+  filter: saturate(1.05) brightness(1.06);
+}
+
+.scene-node:hover {
+  border-color: rgba(176, 255, 202, 0.72);
+  box-shadow:
+    0 28px 70px rgba(0, 0, 0, 0.42),
+    0 0 20px rgba(92, 255, 150, 0.2);
+  filter: brightness(1.04);
 }
 
 .scene-legend {
