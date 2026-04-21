@@ -32,6 +32,7 @@
   };
 
   const STORAGE_KEY = "jackywine-prompt-scene-mode";
+  const THEME_STORAGE_KEY = "jackywine-prompt-theme";
 
   const promptCount = document.getElementById("promptCount");
   const activeCategoryName = document.getElementById("activeCategoryName");
@@ -54,6 +55,9 @@
   const drawerDismissButton = document.getElementById("drawerDismissButton");
   const mode2dButton = document.getElementById("mode2dButton");
   const mode3dButton = document.getElementById("mode3dButton");
+  const themeMatrixButton = document.getElementById("themeMatrixButton");
+  const themeKamiButton = document.getElementById("themeKamiButton");
+  const themeStatusLabel = document.getElementById("themeStatusLabel");
   const sceneShell = document.getElementById("sceneShell");
   const sceneRecordCount = document.getElementById("sceneRecordCount");
   const sceneHint = document.getElementById("sceneHint");
@@ -64,6 +68,7 @@
   let activeItemId = null;
   let query = "";
   let sceneMode = localStorage.getItem(STORAGE_KEY) === "3d" ? "3d" : "2d";
+  let themeMode = localStorage.getItem(THEME_STORAGE_KEY) === "kami" ? "kami" : "matrix";
   let sceneFallbackAnimationId = 0;
   let sceneFallbackState = {
     nodes: [],
@@ -211,6 +216,15 @@
     cardList.closest(".wall-shell").classList.toggle("is-hidden", sceneMode === "3d");
     localStorage.setItem(STORAGE_KEY, sceneMode);
     window.dispatchEvent(new CustomEvent("prompt-scene-mode-change", { detail: { mode: sceneMode } }));
+  }
+
+  function applyThemeMode() {
+    document.body.classList.toggle("theme-matrix", themeMode === "matrix");
+    document.body.classList.toggle("theme-kami", themeMode === "kami");
+    themeMatrixButton.classList.toggle("is-active", themeMode === "matrix");
+    themeKamiButton.classList.toggle("is-active", themeMode === "kami");
+    themeStatusLabel.textContent = themeMode === "kami" ? "Kami reading theme online" : "Matrix scene online";
+    localStorage.setItem(THEME_STORAGE_KEY, themeMode);
   }
 
   function openDrawer() {
@@ -550,6 +564,7 @@
     renderSceneFallback(sceneItems);
     renderDetail(filteredItems);
     applySceneMode();
+    applyThemeMode();
     window.dispatchEvent(
       new CustomEvent("prompt-records-update", {
         detail: {
@@ -583,6 +598,16 @@
 
   mode3dButton.addEventListener("click", () => {
     sceneMode = "3d";
+    render();
+  });
+
+  themeMatrixButton.addEventListener("click", () => {
+    themeMode = "matrix";
+    render();
+  });
+
+  themeKamiButton.addEventListener("click", () => {
+    themeMode = "kami";
     render();
   });
 
