@@ -10,7 +10,7 @@
     />
     <link rel="stylesheet" href="./styles.css" />
   </head>
-  <body class="scene-2d">
+  <body class="scene-2d theme-matrix">
     <canvas id="matrixWebgl" class="fx-layer" aria-hidden="true"></canvas>
     <canvas id="matrixFallback" class="fx-layer" aria-hidden="true"></canvas>
     <canvas id="matrixThree" class="fx-layer is-hidden" aria-hidden="true"></canvas>
@@ -62,13 +62,17 @@
             <strong id="resultMeta">Loading prompt records...</strong>
           </div>
           <div class="toolbar-controls">
+            <div class="mode-toggle" aria-label="Theme switch">
+              <button type="button" class="mode-button is-active" id="themeMatrixButton">Matrix</button>
+              <button type="button" class="mode-button" id="themeKamiButton">Kami</button>
+            </div>
             <div class="mode-toggle" aria-label="Scene mode switch">
               <button type="button" class="mode-button is-active" id="mode2dButton">2D</button>
               <button type="button" class="mode-button" id="mode3dButton">3D</button>
             </div>
             <div class="toolbar-block toolbar-note">
               <span class="status-dot"></span>
-              <span>Matrix scene online</span>
+              <span id="themeStatusLabel">Matrix scene online</span>
             </div>
           </div>
         </section>
